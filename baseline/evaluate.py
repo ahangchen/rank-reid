@@ -25,6 +25,8 @@ QUERY_NUM = 2228
 DATASET = '../dataset/Market'
 TEST = os.path.join(DATASET, 'bounding_box_test')
 TEST_NUM = 19732
+TRAIN = os.path.join(DATASET, 'bounding_box_train')
+TRAIN_NUM = 12936
 QUERY = os.path.join(DATASET, 'query')
 QUERY_NUM = 3368
 
@@ -84,10 +86,16 @@ def similarity_matrix(query_f, test_f):
 
     result = sess.run(tensor, {query_t: query_f, test_t: test_f})
     print(result.shape)
+    # descend
+    return result
+
+
+def sort_similarity(query_f, test_f):
+    result = similarity_matrix(query_f, test_f)
     result_argsort = np.argsort(-result, axis=1)
     print(result_argsort.shape)
     np.savetxt('resnet50_predict_market.txt', result_argsort, fmt='%d')
-    return result_argsort
+    return result, result_argsort
 
 
 def map_rank_eval(query_info, test_info, result_argsort):
@@ -109,7 +117,7 @@ def map_rank_eval(query_info, test_info, result_argsort):
 
     rank_1 = 0.0
     mAP = 0.0
-    TEST_NUM = min(TEST_NUM, len(result_argsort[0]))
+    test_num = min(TEST_NUM, len(result_argsort[0]))
     for idx in range(len(query_info)):
         recall = 0.0
         precision = 1.0
@@ -119,7 +127,7 @@ def map_rank_eval(query_info, test_info, result_argsort):
         YES = match[idx]
         IGNORE = junk[idx]
         rank_flag = True
-        for i in range(0, TEST_NUM):
+        for i in range(0, test_num):
             k = result_argsort[idx][i]
             if k in IGNORE:
                 continue
@@ -143,13 +151,31 @@ def map_rank_eval(query_info, test_info, result_argsort):
     print('mAP:\t%f' % (mAP / QUERY_NUM))
 
 
-def predict_eval():
-    net = load_model('0.ckpt')
-    net = Model(input=net.input, output=net.get_layer('avg_pool').output)
+def train_predict(net, dir_path):
+    net = Model(inputs=[net.input], outputs=[net.get_layer('avg_pool').output])
+    train_f, test_info = extract_feature(TRAIN, net)
+    result, result_argsort = sort_similarity(train_f, train_f)
+    for i in range(len(result)):
+        result[i] = result[i][result_argsort[i]]
+    result = np.array(result)
+    # ignore top1 because it's the origin image
+    np.savetxt(dir_path+'/train_renew_ac.log', result[:, 1:], fmt='%.4f')
+    np.savetxt(dir_path+'/train_renew_pid.log', result_argsort[:, 1:], fmt='%d')
+    return result
+
+
+def test_predict(net, dir_path):
+    net = Model(inputs=[net.input], outputs=[net.get_layer('avg_pool').output])
     test_f, test_info = extract_feature(TEST, net)
     query_f, query_info = extract_feature(QUERY, net)
-    result_argsort = similarity_matrix(query_f, test_f)
-    map_rank_eval(query_info, test_info, result_argsort)
+    result, result_argsort = sort_similarity(query_f, test_f)
+    for i in range(len(result)):
+        result[i] = result[i][result_argsort[i]]
+    result = np.array(result)
+    # ignore top1 because it's the origin image
+    np.savetxt(dir_path+'/test_renew_ac.log', result, fmt='%.4f')
+    np.savetxt(dir_path+'/test_renew_pid.log', result_argsort, fmt='%d')
+    # map_rank_eval(query_info, test_info, result_argsort)
 
 
 def file_result_eval(path):
@@ -160,5 +186,5 @@ def file_result_eval(path):
 
 
 if __name__ == '__main__':
-    file_result_eval('resnet50_predict_market.txt')
+    file_result_eval('../train/test_renew_pid.log')
     # predict_eval()
