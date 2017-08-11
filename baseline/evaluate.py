@@ -55,9 +55,18 @@ def extract_feature(dir_path, net):
     infos = []
     num = 0
     for image_name in sorted(os.listdir(dir_path)):
-        arr = image_name.split('_')
-        person = int(arr[0])
-        camera = int(arr[1][1])
+        if 'jpeg' in image_name:
+            # grid
+            arr = image_name.split('_')
+            person = int(arr[0])
+            camera = int(arr[1])
+        elif 'jpg' in image_name:
+            #market
+            arr = image_name.split('_')
+            person = int(arr[0])
+            camera = int(arr[1][1])
+        else:
+            continue
         image_path = os.path.join(dir_path, image_name)
         img = image.load_img(image_path, target_size=(224, 224))
         x = image.img_to_array(img)
@@ -151,9 +160,9 @@ def map_rank_eval(query_info, test_info, result_argsort):
     print('mAP:\t%f' % (mAP / QUERY_NUM))
 
 
-def train_predict(net, dir_path):
+def train_predict(train_path, net, dir_path):
     net = Model(inputs=[net.input], outputs=[net.get_layer('avg_pool').output])
-    train_f, test_info = extract_feature(TRAIN, net)
+    train_f, test_info = extract_feature(train_path, net)
     result, result_argsort = sort_similarity(train_f, train_f)
     for i in range(len(result)):
         result[i] = result[i][result_argsort[i]]
@@ -164,17 +173,17 @@ def train_predict(net, dir_path):
     return result
 
 
-def test_predict(net, dir_path):
+def test_predict(net, probe_path, gallery_path, log_dir_path):
     net = Model(inputs=[net.input], outputs=[net.get_layer('avg_pool').output])
-    test_f, test_info = extract_feature(TEST, net)
-    query_f, query_info = extract_feature(QUERY, net)
+    test_f, test_info = extract_feature(gallery_path, net)
+    query_f, query_info = extract_feature(probe_path, net)
     result, result_argsort = sort_similarity(query_f, test_f)
     for i in range(len(result)):
         result[i] = result[i][result_argsort[i]]
     result = np.array(result)
     # ignore top1 because it's the origin image
-    np.savetxt(dir_path+'/test_renew_ac.log', result, fmt='%.4f')
-    np.savetxt(dir_path+'/test_renew_pid.log', result_argsort, fmt='%d')
+    np.savetxt(log_dir_path + '/test_renew_ac.log', result, fmt='%.4f')
+    np.savetxt(log_dir_path + '/test_renew_pid.log', result_argsort, fmt='%d')
     # map_rank_eval(query_info, test_info, result_argsort)
 
 
@@ -185,6 +194,34 @@ def file_result_eval(path):
     map_rank_eval(query_info, test_info, res)
 
 
+def grid_result_eval(predict_path):
+    pids4probes = np.genfromtxt(predict_path, delimiter=' ')
+    probe_shoot = [0, 0, 0, 0, 0]
+    for i, pids in enumerate(pids4probes):
+        for j, pid in enumerate(pids):
+            if pid - i == 775:
+                if j == 0:
+                    for k in range(5):
+                        probe_shoot[k] += 1
+                elif j < 5:
+                    for k in range(1,5):
+                        probe_shoot[k] += 1
+                elif j < 10:
+                    for k in range(2,5):
+                        probe_shoot[k] += 1
+                elif j < 20:
+                    for k in range(3,5):
+                        probe_shoot[k] += 1
+                elif j < 50:
+                    for k in range(4,5):
+                        probe_shoot[k] += 1
+                break
+    probe_acc = [shoot/len(pids4probes) for shoot in probe_shoot]
+    print(probe_acc)
+
+
+
 if __name__ == '__main__':
-    file_result_eval('../train/test_renew_pid.log')
+    # file_result_eval('../train/test_renew_pid.log')
     # predict_eval()
+    grid_result_eval('../train/grid_cross0_transfer/test_renew_pid.log')

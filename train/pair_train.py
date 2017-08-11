@@ -34,6 +34,26 @@ def reid_data_prepare(data_list_path, train_dir_path):
     return class_img_labels
 
 
+def grid_data_prepare(data_list_path, train_dir_path):
+    class_img_labels = dict()
+    cur_label = -2
+    with open(data_list_path, 'r') as f:
+        for line in f:
+            line = line.strip()
+            img = line
+            lbl = line.split('_')[0]
+            img = image.load_img(os.path.join(train_dir_path, img), target_size=[224, 224])
+            img = image.img_to_array(img)
+            img = np.expand_dims(img, axis=0)
+            img = preprocess_input(img)
+            if int(lbl) != cur_label:
+                cur_list = list()
+                class_img_labels[lbl] = cur_list
+                cur_label = int(lbl)
+            class_img_labels[lbl].append(img[0])
+    return class_img_labels
+
+
 def pair_generator(class_img_labels, batch_size, train=False):
     cur_epoch = 0
     pos_prop = 4
