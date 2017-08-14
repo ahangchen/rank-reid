@@ -55,7 +55,7 @@ def extract_feature(dir_path, net):
     infos = []
     num = 0
     for image_name in sorted(os.listdir(dir_path)):
-        if 'jpeg' in image_name:
+        if 'jpeg' in image_name or 'png' in image_name:
             # grid
             arr = image_name.split('_')
             person = int(arr[0])

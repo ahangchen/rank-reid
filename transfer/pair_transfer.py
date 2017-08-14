@@ -1,5 +1,7 @@
 import os
 
+from train.pair_eval import grid_test_pair_eval
+
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"  # see issue #152
 os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 import numpy as np
@@ -28,55 +30,60 @@ def reid_img_prepare(LIST, TRAIN):
     images = np.array(images)
     return images
 
+def gen_neg_right_img_ids(left_similar_persons, img_cnt, batch_size):
+    right_img_ids = list()
+    right_img_idxes = randint(img_cnt * 9 / 10, img_cnt - 1, size=batch_size)
+    for i in range(batch_size):
+        right_img_ids.append(left_similar_persons[i][right_img_idxes[i]])
+    right_img_ids = np.array(right_img_ids)
+    binary_labels = np.zeros(batch_size)
+    return right_img_ids, binary_labels
+
+
+
+def gen_right_img_ids(cur_epoch, mid_score, similar_matrix, similar_persons, left_img_ids, img_cnt, batch_size):
+    pos_prop = 4
+    if cur_epoch % pos_prop == 0:
+        # select from rank1 and similarity > mid_score as pos samples
+        pos_right_idxes = np.where(similar_matrix[left_img_ids, :1] > mid_score)
+        neg_left_img_ids = left_img_ids[np.setdiff1d(np.arange(batch_size), np.array(pos_right_idxes).reshape(-1))]
+
+        pos_right_img_ids = similar_persons[left_img_ids][pos_right_idxes]
+        if len(neg_left_img_ids) > 0:
+            # other turn to negative samples
+            neg_left_similar_persons = similar_persons[neg_left_img_ids]
+            neg_right_img_ids, neg_binary_labels = gen_neg_right_img_ids(neg_left_similar_persons, img_cnt,
+                                                                         len(neg_left_img_ids))
+            right_img_ids = np.concatenate((pos_right_img_ids, neg_right_img_ids))
+            binary_labels = np.concatenate([np.ones(len(pos_right_img_ids)), neg_binary_labels])
+        else:
+            right_img_ids = np.array(pos_right_img_ids).reshape(-1)
+            binary_labels = np.ones(batch_size)
+
+    else:
+        # select from last match for negative
+        left_similar_persons = similar_persons[left_img_ids]
+        right_img_ids, binary_labels = gen_neg_right_img_ids(left_similar_persons, img_cnt, batch_size)
+    right_img_ids = right_img_ids.astype(int)
+    return right_img_ids, binary_labels
 
 def pair_generator_by_rank_list(train_images, batch_size, similar_persons, similar_matrix, train=False):
     cur_epoch = 0
-    pos_prop = 4
+
     img_cnt = len(similar_persons)
     rank1_scores = similar_matrix[:, :1].reshape(img_cnt)
     sorted_score = np.sort(-rank1_scores)
     mid_score = sorted_score[img_cnt / 2]
     while True:
         left_img_ids = randint(img_cnt, size=batch_size)
-        if cur_epoch % pos_prop == 0:
-            # select from rank1 and similarity > mid_score as pos samples
-            pos_right_idxes = np.where(similar_matrix[left_img_ids, :1]> mid_score)
-            neg_left_img_ids = left_img_ids[np.setdiff1d(np.arange(batch_size), np.array(pos_right_idxes).reshape(-1))]
-
-            pos_right_img_ids = similar_persons[left_img_ids][pos_right_idxes]
-            if len(neg_left_img_ids) > 0:
-                # other turn to negative samples
-                neg_right_img_ids = list()
-                neg_right_img_idxes = randint(img_cnt * 9 / 10, img_cnt-1, size=len(neg_left_img_ids))
-                # print pos_right_img_ids
-                # print neg_left_img_ids
-                for i in range(batch_size):
-                    neg_right_img_ids.append(similar_persons[neg_left_img_ids][i][neg_right_img_idxes[i]])
-                neg_right_img_ids = np.array(neg_right_img_ids)
-
-                right_img_ids = np.concatenate((pos_right_img_ids, neg_right_img_ids))
-                binary_labels = np.concatenate([np.ones(len(pos_right_img_ids)), np.zeros(len(neg_right_img_ids))])
-            else:
-                right_img_ids = np.array(pos_right_img_ids).reshape(-1)
-                binary_labels = np.ones(batch_size)
-
-        else:
-            # select from last match for negative
-            left_similar_persons = similar_persons[left_img_ids]
-            right_img_ids  = list()
-            right_img_idxes = randint(img_cnt*9/10, img_cnt-1, size=batch_size)
-            for i in range(batch_size):
-                right_img_ids.append(left_similar_persons[i][right_img_idxes[i]])
-            right_img_ids = np.array(right_img_ids)
-            binary_labels = np.zeros(batch_size)
-        right_img_ids = right_img_ids.astype(int)
-        # print left_img_ids
-        # print right_img_ids
+        right_img_ids, binary_labels = gen_right_img_ids(cur_epoch, mid_score,
+                                          similar_matrix, similar_persons,
+                                          left_img_ids,
+                                          img_cnt, batch_size)
         left_images = train_images[left_img_ids]
         right_images = train_images[right_img_ids]
         cur_epoch += 1
         yield [left_images, right_images], [to_categorical(binary_labels, 2)]
-
 
 def eucl_dist(inputs):
     x, y = inputs
@@ -141,3 +148,4 @@ def pair_transfer_2grid():
 
 if __name__ == '__main__':
     pair_transfer_2grid()
+    grid_test_pair_eval('../transfer/pair_transfer.h5', 'grid_cross0_transfer')
