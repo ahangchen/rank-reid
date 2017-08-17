@@ -70,6 +70,7 @@ def pair_generator(class_img_labels, batch_size, train=False):
         if train:
             slice_start = 0
         else:
+            # val
             slice_start = 0.9
         for i in range(batch_size):
             len_left_label_i = len(class_img_labels[str(left_label[i])])
@@ -145,7 +146,7 @@ def pair_tune(train_generator, val_generator, source_model_path, batch_size=48, 
 
 if __name__ == '__main__':
     DATASET = '../dataset/Market'
-    LIST = os.path.join(DATASET, 'train.list')
+    LIST = os.path.join(DATASET, 'pretrain.list')
     TRAIN = os.path.join(DATASET, 'bounding_box_train')
     class_count = 751
     class_img_labels = reid_data_prepare(LIST, TRAIN)

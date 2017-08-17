@@ -222,6 +222,6 @@ def grid_result_eval(predict_path):
 
 
 if __name__ == '__main__':
-    # file_result_eval('../train/test_renew_pid.log')
+    # file_result_eval('../pretrain/test_renew_pid.log')
     # predict_eval()
-    grid_result_eval('../train/grid_cross0_transfer/test_renew_pid.log')
+    grid_result_eval('../pretrain/grid_cross0_transfer/test_renew_pid.log')

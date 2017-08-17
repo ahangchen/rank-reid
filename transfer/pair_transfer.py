@@ -1,6 +1,6 @@
 import os
 
-from train.pair_eval import grid_test_pair_eval
+from pretrain.eval import grid_test_pair_eval
 
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"  # see issue #152
 os.environ["CUDA_VISIBLE_DEVICES"] = "1"
@@ -67,6 +67,7 @@ def gen_right_img_ids(cur_epoch, mid_score, similar_matrix, similar_persons, lef
     right_img_ids = right_img_ids.astype(int)
     return right_img_ids, binary_labels
 
+
 def pair_generator_by_rank_list(train_images, batch_size, similar_persons, similar_matrix, train=False):
     cur_epoch = 0
 
@@ -90,8 +91,8 @@ def eucl_dist(inputs):
     return (x - y) ** 2
 
 
-def pair_transfer_model(single_model_path):
-    base_model = load_model(single_model_path)
+def pair_transfer_model(pair_model_path):
+    base_model = load_model(pair_model_path)
     model = Model(inputs=base_model.inputs, outputs=[base_model.get_layer('bin_out').output], name='binary_model')
     plot_model(model, to_file='model_transfer.png')
     return model
@@ -117,32 +118,32 @@ def pair_transfer(train_generator, val_generator, source_model_path, batch_size=
 
 def pair_transfer_2market():
     DATASET = '../dataset/Market'
-    LIST = os.path.join(DATASET, 'train.list')
+    LIST = os.path.join(DATASET, 'pretrain.list')
     TRAIN = os.path.join(DATASET, 'bounding_box_train')
     train_images = reid_img_prepare(LIST, TRAIN)
     batch_size = 64
-    similar_persons = np.genfromtxt('../train/train_renew_pid.log', delimiter=' ')
-    similar_matrix = np.genfromtxt('../train/train_renew_ac.log', delimiter=' ')
+    similar_persons = np.genfromtxt('../pretrain/train_renew_pid.log', delimiter=' ')
+    similar_matrix = np.genfromtxt('../pretrain/train_renew_ac.log', delimiter=' ')
     pair_transfer(
         pair_generator_by_rank_list(train_images, batch_size, similar_persons, similar_matrix, train=True),
         pair_generator_by_rank_list(train_images, batch_size, similar_persons, similar_matrix, train=False),
-        '../train/pair_pretrain.h5',
+        '../pretrain/pair_pretrain.h5',
         batch_size=batch_size
     )
 
 
 def pair_transfer_2grid():
     DATASET = '/home/cwh/coding/grid_train_probe_gallery/cross0'
-    LIST = os.path.join(DATASET, 'train/test_track.txt')
-    TRAIN = os.path.join(DATASET, 'train')
+    LIST = os.path.join(DATASET, 'pretrain/test_track.txt')
+    TRAIN = os.path.join(DATASET, 'pretrain')
     train_images = reid_img_prepare(LIST, TRAIN)
     batch_size = 64
-    similar_persons = np.genfromtxt('../train/grid_cross0/train_renew_pid.log', delimiter=' ')
-    similar_matrix = np.genfromtxt('../train/grid_cross0/train_renew_ac.log', delimiter=' ')
+    similar_persons = np.genfromtxt('../pretrain/grid_cross0/train_renew_pid.log', delimiter=' ')
+    similar_matrix = np.genfromtxt('../pretrain/grid_cross0/train_renew_ac.log', delimiter=' ')
     pair_transfer(
         pair_generator_by_rank_list(train_images, batch_size, similar_persons, similar_matrix, train=True),
         pair_generator_by_rank_list(train_images, batch_size, similar_persons, similar_matrix, train=False),
-        '../train/pair_pretrain.h5',
+        '../pretrain/pair_pretrain.h5',
         batch_size=batch_size
     )
 

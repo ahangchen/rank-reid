@@ -163,11 +163,11 @@ def rank_transfer(train_generator, val_generator, source_model_path, batch_size=
                       # 'sub_score': 'mse',
                     },
                   loss_weights={
-                      'bin_out1': 0.5,
-                      'bin_out2': 0.5,
-                      'score1': 0.5,
-                      'score2': 0.5,
-                      'sub_score': 1.
+                      'bin_out1': 0.1,
+                      'bin_out2': 0.1,
+                      'score1': 0.1,
+                      'score2': 0.1,
+                      'sub_score': 0.9
                   },
                   metrics=['accuracy'])
 
@@ -185,28 +185,28 @@ def rank_transfer(train_generator, val_generator, source_model_path, batch_size=
 
 def rank_transfer_2market():
     DATASET = '../dataset/Market'
-    LIST = os.path.join(DATASET, 'train.list')
+    LIST = os.path.join(DATASET, 'pretrain.list')
     TRAIN = os.path.join(DATASET, 'bounding_box_train')
     train_images = reid_img_prepare(LIST, TRAIN)
     batch_size = 64
-    similar_persons = np.genfromtxt('../train/train_renew_pid.log', delimiter=' ')
-    similar_matrix = np.genfromtxt('../train/train_renew_ac.log', delimiter=' ')
+    similar_persons = np.genfromtxt('../pretrain/train_renew_pid.log', delimiter=' ')
+    similar_matrix = np.genfromtxt('../pretrain/train_renew_ac.log', delimiter=' ')
     rank_transfer(
         triplet_generator_by_rank_list(train_images, batch_size, similar_persons, similar_matrix, train=True),
         triplet_generator_by_rank_list(train_images, batch_size, similar_persons, similar_matrix, train=False),
-        '../train/pair_pretrain.h5',
+        '../pretrain/pair_pretrain.h5',
         batch_size=batch_size
     )
 
 
 def rank_transfer_2grid():
     DATASET = '/home/cwh/coding/grid_train_probe_gallery/cross0'
-    LIST = os.path.join(DATASET, 'train/test_track.txt')
-    TRAIN = os.path.join(DATASET, 'train')
+    LIST = os.path.join(DATASET, 'pretrain/test_track.txt')
+    TRAIN = os.path.join(DATASET, 'pretrain')
     train_images = reid_img_prepare(LIST, TRAIN)
     batch_size = 64
-    similar_persons = np.genfromtxt('../train/grid_cross0/train_renew_pid.log', delimiter=' ')
-    similar_matrix = np.genfromtxt('../train/grid_cross0/train_renew_ac.log', delimiter=' ')
+    similar_persons = np.genfromtxt('../pretrain/grid_cross0/train_renew_pid.log', delimiter=' ')
+    similar_matrix = np.genfromtxt('../pretrain/grid_cross0/train_renew_ac.log', delimiter=' ')
     rank_transfer(
         triplet_generator_by_rank_list(train_images, batch_size, similar_persons, similar_matrix, train=True),
         triplet_generator_by_rank_list(train_images, batch_size, similar_persons, similar_matrix, train=False),

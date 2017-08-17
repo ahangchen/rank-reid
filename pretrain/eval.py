@@ -31,7 +31,7 @@ def grid_train_pair_eval(model_path, log_dir_path):
     model = Model(inputs=[model.get_layer('model_1').get_input_at(0)],
                   outputs=[model.get_layer('model_1').get_output_at(0)])
     DATASET = '/home/cwh/coding/underground_reid/cross0'
-    TRAIN = os.path.join(DATASET, 'train')
+    TRAIN = os.path.join(DATASET, 'pretrain')
     safe_mkdir(log_dir_path)
     train_predict(TRAIN, model, log_dir_path)
 
@@ -78,4 +78,4 @@ if __name__ == '__main__':
     # grid_test_pair_eval('../transfer/pair_transfer.h5', 'grid_cross0_transfer')
     # [0.192, 0.312, 0.376, 0.496, 0.624]
     grid_test_rank_eval('../transfer/rank_transfer.h5', 'grid_cross0_rank_transfer')
-    # [0.168, 0.304, 0.36, 0.44, 0.656]
+    # [0.184, 0.304, 0.344, 0.456, 0.656]

@@ -26,18 +26,18 @@ from keras.models import load_model
 
 '''
 DATASET = '../dataset/Duke'
-LIST = os.path.join(DATASET, 'train.list')
+LIST = os.path.join(DATASET, 'pretrain.list')
 TRAIN = os.path.join(DATASET, 'bounding_box_train')
 class_count = 702
 '''
 
 DATASET = '../dataset/Market'
-LIST = os.path.join(DATASET, 'train.list')
+LIST = os.path.join(DATASET, 'pretrain.list')
 TRAIN = os.path.join(DATASET, 'bounding_box_train')
 class_count = 751
 '''
 DATASET = '../dataset/CUHK03'
-LIST = os.path.join(DATASET, 'train.list')
+LIST = os.path.join(DATASET, 'pretrain.list')
 TRAIN = os.path.join(DATASET, 'bbox_train')
 '''
 
@@ -90,7 +90,7 @@ def pretrain(DATASET, LIST, TRAIN, class_count):
         layer.trainable = True
 
     img_cnt = len(labels)
-    # train
+    # pretrain
     batch_size = 64
     train_datagen = ImageDataGenerator(
         shear_range=0.2,
