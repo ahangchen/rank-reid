@@ -76,6 +76,8 @@ if __name__ == '__main__':
     # cross0: [0.072, 0.144, 0.184, 0.232, 0.408]
     # cross0_gan: [0.136, 0.344, 0.416, 0.544, 0.648]
     # grid_test_pair_eval('../transfer/pair_transfer.h5', 'grid_cross0_transfer')
-    # [0.192, 0.312, 0.376, 0.496, 0.624]
-    grid_test_rank_eval('../transfer/rank_transfer.h5', 'grid_cross0_rank_transfer')
+    grid_test_pair_eval('../transfer/pair_pretrain.h5', 'grid_cross0_pair_pretrain')
+    # [0.088, 0.16, 0.2, 0.296, 0.456]
+    # [0.192, 0.312, 0.376, 0.496, 0.624] epoch7
+    # grid_test_rank_eval('../transfer/rank_transfer.h5', 'grid_cross0_rank_transfer')
     # [0.184, 0.304, 0.344, 0.456, 0.656]
