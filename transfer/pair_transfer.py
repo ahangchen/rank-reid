@@ -1,6 +1,6 @@
 import os
 
-from pretrain.eval import grid_test_pair_eval
+from pretrain.eval import test_pair_eval
 
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"  # see issue #152
 os.environ["CUDA_VISIBLE_DEVICES"] = "1"
@@ -29,6 +29,7 @@ def reid_img_prepare(LIST, TRAIN):
             images.append(img[0])
     images = np.array(images)
     return images
+
 
 def gen_neg_right_img_ids(left_similar_persons, img_cnt, batch_size):
     right_img_ids = list()
@@ -138,8 +139,11 @@ def pair_transfer_2grid():
     TRAIN = os.path.join(DATASET, 'pretrain')
     train_images = reid_img_prepare(LIST, TRAIN)
     batch_size = 64
-    similar_persons = np.genfromtxt('../pretrain/grid_cross0/train_renew_pid.log', delimiter=' ')
-    similar_matrix = np.genfromtxt('../pretrain/grid_cross0/train_renew_ac.log', delimiter=' ')
+    # similar_persons = np.genfromtxt('../pretrain/grid_cross0/train_renew_pid.log', delimiter=' ')
+    # similar_matrix = np.genfromtxt('../pretrain/grid_cross0/train_renew_ac.log', delimiter=' ')
+    similar_persons = np.genfromtxt('../pretrain/grid_cross0/cross_filter_pid.log', delimiter=' ') - 1
+    similar_matrix = np.genfromtxt('../pretrain/grid_cross0/cross_filter_score.log', delimiter=' ')
+
     pair_transfer(
         pair_generator_by_rank_list(train_images, batch_size, similar_persons, similar_matrix, train=True),
         pair_generator_by_rank_list(train_images, batch_size, similar_persons, similar_matrix, train=False),
@@ -149,4 +153,7 @@ def pair_transfer_2grid():
 
 if __name__ == '__main__':
     pair_transfer_2grid()
-    grid_test_pair_eval('../transfer/pair_transfer.h5', 'grid_cross0_transfer')
+    test_pair_eval('../transfer/pair_transfer.h5', 'grid_cross0_transfer',
+                   '/home/cwh/coding/grid_train_probe_gallery/cross0/probe',
+                   '/home/cwh/coding/grid_train_probe_gallery/cross0/gallery',
+                   )

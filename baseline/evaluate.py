@@ -220,8 +220,9 @@ def grid_result_eval(predict_path):
     print(probe_acc)
 
 
-
 if __name__ == '__main__':
     # file_result_eval('../pretrain/test_renew_pid.log')
     # predict_eval()
-    grid_result_eval('../pretrain/grid_cross0_transfer/test_renew_pid.log')
+    # grid_result_eval('../pretrain/grid_cross0_transfer/test_renew_pid.log')
+    grid_result_eval('/home/cwh/coding/TrackViz/data/top-m2g-std0-test/cross_filter_pid.log')
+    # [0.504, 0.776, 0.84, 0.896, 0.968]
