@@ -1,6 +1,6 @@
 import os
 
-from pretrain.eval import test_pair_eval
+from pretrain.eval import test_pair_predict
 
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"  # see issue #152
 os.environ["CUDA_VISIBLE_DEVICES"] = "1"
@@ -41,7 +41,6 @@ def gen_neg_right_img_ids(left_similar_persons, img_cnt, batch_size):
     return right_img_ids, binary_labels
 
 
-
 def gen_right_img_ids(cur_epoch, mid_score, similar_matrix, similar_persons, left_img_ids, img_cnt, batch_size):
     pos_prop = 4
     if cur_epoch % pos_prop == 0:
@@ -79,13 +78,14 @@ def pair_generator_by_rank_list(train_images, batch_size, similar_persons, simil
     while True:
         left_img_ids = randint(img_cnt, size=batch_size)
         right_img_ids, binary_labels = gen_right_img_ids(cur_epoch, mid_score,
-                                          similar_matrix, similar_persons,
-                                          left_img_ids,
-                                          img_cnt, batch_size)
+                                                         similar_matrix, similar_persons,
+                                                         left_img_ids,
+                                                         img_cnt, batch_size)
         left_images = train_images[left_img_ids]
         right_images = train_images[right_img_ids]
         cur_epoch += 1
         yield [left_images, right_images], [to_categorical(binary_labels, 2)]
+
 
 def eucl_dist(inputs):
     x, y = inputs
@@ -151,9 +151,11 @@ def pair_transfer_2grid():
         batch_size=batch_size
     )
 
+
 if __name__ == '__main__':
     pair_transfer_2grid()
-    test_pair_eval('../transfer/pair_transfer.h5', 'grid_cross0_transfer',
-                   '/home/cwh/coding/grid_train_probe_gallery/cross0/probe',
-                   '/home/cwh/coding/grid_train_probe_gallery/cross0/gallery',
-                   )
+    test_pair_predict('../transfer/pair_transfer.h5',
+                      '/home/cwh/coding/grid_train_probe_gallery/cross0/probe',
+                      '/home/cwh/coding/grid_train_probe_gallery/cross0/gallery',
+                      'pid_path', 'score_path'
+                      )

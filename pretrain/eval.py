@@ -7,23 +7,23 @@ from transfer.rank_transfer import cross_entropy_loss
 from util import safe_mkdir
 
 
-def market_train_pair_eval():
-    model = load_model('pair_pretrain.h5')
-    model = Model(inputs=[model.get_layer('model_1').get_input_at(0)],
-                  outputs=[model.get_layer('model_1').get_output_at(0)])
-    DATASET = '../dataset/Market'
-    TRAIN = os.path.join(DATASET, 'bounding_box_train')
-    train_predict(TRAIN, model, '.')
-
-
-def market_test_pair_eval():
-    model = load_model('pair_pretrain.h5')
-    model = Model(inputs=[model.get_layer('model_1').get_input_at(0)],
-                  outputs=[model.get_layer('model_1').get_output_at(0)])
-    DATASET = '../dataset/Market'
-    TEST = os.path.join(DATASET, 'bounding_box_test')
-    QUERY = os.path.join(DATASET, 'query')
-    test_predict(model, QUERY, TEST, '.')
+# def market_train_pair_eval():
+#     model = load_model('pair_pretrain.h5')
+#     model = Model(inputs=[model.get_layer('model_1').get_input_at(0)],
+#                   outputs=[model.get_layer('model_1').get_output_at(0)])
+#     DATASET = '../dataset/Market'
+#     TRAIN = os.path.join(DATASET, 'bounding_box_train')
+#     train_predict(TRAIN, model, '.')
+#
+#
+# def market_test_pair_eval():
+#     model = load_model('pair_pretrain.h5')
+#     model = Model(inputs=[model.get_layer('model_1').get_input_at(0)],
+#                   outputs=[model.get_layer('model_1').get_output_at(0)])
+#     DATASET = '../dataset/Market'
+#     TEST = os.path.join(DATASET, 'bounding_box_test')
+#     QUERY = os.path.join(DATASET, 'query')
+#     test_predict(model, QUERY, TEST, '.')
 
 
 def grid_test_base_eval(model_path, log_dir_path):
@@ -37,48 +37,36 @@ def grid_test_base_eval(model_path, log_dir_path):
     grid_result_eval(log_dir_path+'/test_renew_pid.log')
 
 
-def train_pair_eval(pair_model_path, log_dir_path, target_train_path):
+def train_pair_predict(pair_model_path, target_train_path, pid_path, score_path):
     model = load_model(pair_model_path)
     model = Model(inputs=[model.get_layer('model_1').get_input_at(0)],
                   outputs=[model.get_layer('model_1').get_output_at(0)])
-    safe_mkdir(log_dir_path)
-    train_predict(target_train_path, model, log_dir_path)
+    train_predict(model, target_train_path, pid_path, score_path)
 
 
-def test_pair_eval(pair_model_path, log_dir_path, target_probe_path, target_gallery_path):
+def test_pair_predict(pair_model_path, target_probe_path, target_gallery_path, pid_path, score_path):
     model = load_model(pair_model_path)
     model = Model(inputs=[model.get_layer('model_1').get_input_at(0)],
                   outputs=[model.get_layer('model_1').get_output_at(0)])
-    # DATASET = '/home/cwh/coding/grid_train_probe_gallery/cross0'
-    safe_mkdir(log_dir_path)
-    test_predict(model, target_probe_path, target_gallery_path, log_dir_path)
-    grid_result_eval(log_dir_path+'/test_renew_pid.log')
+    test_predict(model, target_probe_path, target_gallery_path, pid_path, score_path)
 
 
-def train_rank_eval(rank_model_path, log_dir_path, target_dataset):
+def train_rank_predict(rank_model_path, target_train_path, pid_path, score_path):
     model = load_model(rank_model_path, custom_objects={'cross_entropy_loss': cross_entropy_loss})
     model = Model(inputs=[model.get_layer('resnet50').get_input_at(0)],
                   outputs=[model.get_layer('resnet50').get_output_at(0)])
-    probe = os.path.join(target_dataset, 'probe')
-    gallery = os.path.join(target_dataset, 'test')
-    safe_mkdir(log_dir_path)
-    test_predict(model, probe, gallery, log_dir_path)
-    grid_result_eval(log_dir_path + '/test_renew_pid.log')
+    train_predict(model, target_train_path, pid_path, score_path)
 
 
-def test_rank_eval(rank_model_path, log_dir_path, target_dataset):
+def test_rank_eval(rank_model_path, target_probe_path, target_gallery_path, pid_path, score_path):
     model = load_model(rank_model_path, custom_objects={'cross_entropy_loss': cross_entropy_loss})
     model = Model(inputs=[model.get_layer('resnet50').get_input_at(0)],
                   outputs=[model.get_layer('resnet50').get_output_at(0)])
-    probe = os.path.join(target_dataset, 'probe')
-    gallery = os.path.join(target_dataset, 'test')
-    safe_mkdir(log_dir_path)
-    test_predict(model, probe, gallery, log_dir_path)
-    grid_result_eval(log_dir_path + '/test_renew_pid.log')
+    test_predict(model, target_probe_path, target_gallery_path, pid_path, score_path)
 
 
 if __name__ == '__main__':
-    train_pair_eval('../transfer/pair_pretrain.h5', 'grid_train', '/home/cwh/coding/grid_train_probe_gallery/cross0')
+    train_pair_predict('../transfer/pair_pretrain.h5', 'grid_train', '/home/cwh/coding/grid_train_probe_gallery/cross0')
     # grid_test_base_eval('../baseline/0.ckpt', 'grid_cross0_single')
     # cross0: [0.072, 0.144, 0.184, 0.232, 0.408]
     # cross0_gan: [0.136, 0.344, 0.416, 0.544, 0.648]

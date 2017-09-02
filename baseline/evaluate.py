@@ -160,7 +160,7 @@ def map_rank_eval(query_info, test_info, result_argsort):
     print('mAP:\t%f' % (mAP / QUERY_NUM))
 
 
-def train_predict(train_path, net, dir_path):
+def train_predict(net, train_path, pid_path, score_path):
     net = Model(inputs=[net.input], outputs=[net.get_layer('avg_pool').output])
     train_f, test_info = extract_feature(train_path, net)
     result, result_argsort = sort_similarity(train_f, train_f)
@@ -168,12 +168,12 @@ def train_predict(train_path, net, dir_path):
         result[i] = result[i][result_argsort[i]]
     result = np.array(result)
     # ignore top1 because it's the origin image
-    np.savetxt(dir_path+'/train_renew_ac.log', result[:, 1:], fmt='%.4f')
-    np.savetxt(dir_path+'/train_renew_pid.log', result_argsort[:, 1:], fmt='%d')
+    np.savetxt(score_path, result[:, 1:], fmt='%.4f')
+    np.savetxt(pid_path, result_argsort[:, 1:], fmt='%d')
     return result
 
 
-def test_predict(net, probe_path, gallery_path, log_dir_path):
+def test_predict(net, probe_path, gallery_path, pid_path, score_path):
     net = Model(inputs=[net.input], outputs=[net.get_layer('avg_pool').output])
     test_f, test_info = extract_feature(gallery_path, net)
     query_f, query_info = extract_feature(probe_path, net)
@@ -182,8 +182,8 @@ def test_predict(net, probe_path, gallery_path, log_dir_path):
         result[i] = result[i][result_argsort[i]]
     result = np.array(result)
     # ignore top1 because it's the origin image
-    np.savetxt(log_dir_path + '/test_renew_ac.log', result, fmt='%.4f')
-    np.savetxt(log_dir_path + '/test_renew_pid.log', result_argsort, fmt='%d')
+    np.savetxt(pid_path, result, fmt='%.4f')
+    np.savetxt(score_path, result_argsort, fmt='%d')
     # map_rank_eval(query_info, test_info, result_argsort)
 
 

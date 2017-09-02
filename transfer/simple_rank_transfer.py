@@ -99,6 +99,7 @@ def triplet_generator_by_rank_list(train_images, batch_size, similar_persons, si
         else:
             yield [left_images, right_images2, right_images1], [-sub_scores]
 
+
 def eucl_dist(inputs):
     x, y = inputs
     return (x - y) ** 2
@@ -140,7 +141,7 @@ def rank_transfer_model(pair_model_path):
     return model
 
 
-def rank_transfer(train_generator, val_generator, source_model_path, batch_size=48):
+def rank_transfer(train_generator, val_generator, source_model_path, target_model_path, batch_size=48):
     model = rank_transfer_model(source_model_path)
     plot_model(model, 'rank_model.png')
     model.compile(optimizer='nadam',
@@ -164,7 +165,7 @@ def rank_transfer(train_generator, val_generator, source_model_path, batch_size=
                         validation_steps=1800 / batch_size + 1,
                         callbacks=[early_stopping, auto_lr])
     # model.save('simple_rank_transfer.h5')
-    model.save('simple_rank_transfer_st.h5')
+    model.save(target_model_path)
 
 
 def rank_transfer_2market():
@@ -185,11 +186,9 @@ def rank_transfer_2market():
     )
 
 
-def rank_transfer_2grid(rank_pid_path, rank_score_path):
-    DATASET = '/home/cwh/coding/grid_train_probe_gallery/cross0'
-    LIST = os.path.join(DATASET, 'pretrain/test_track.txt')
-    TRAIN = os.path.join(DATASET, 'pretrain')
-    train_images = reid_img_prepare(LIST, TRAIN)
+def rank_transfer_2dataset(source_pair_model_path, target_model_path, target_train_path, rank_pid_path, rank_score_path):
+    LIST = target_train_path + '/test_track.txt'
+    train_images = reid_img_prepare(LIST, target_train_path)
     batch_size = 64
     similar_persons = np.genfromtxt(rank_pid_path, delimiter=' ')
     if 'cross' in rank_pid_path:
@@ -198,7 +197,8 @@ def rank_transfer_2grid(rank_pid_path, rank_score_path):
     rank_transfer(
         triplet_generator_by_rank_list(train_images, batch_size, similar_persons, similar_matrix, train=True),
         triplet_generator_by_rank_list(train_images, batch_size, similar_persons, similar_matrix, train=False),
-        '../pretrain/pair_pretrain.h5',
+        source_pair_model_path,
+        target_model_path,
         batch_size=batch_size
     )
 
@@ -207,6 +207,7 @@ if __name__ == '__main__':
     # rank_transfer_2grid('../pretrain/grid_cross0/train_renew_pid.log', '../pretrain/grid_cross0/train_renew_ac.log')
     # grid_test_rank_eval('../transfer/simple_rank_transfer.h5', 'grid_cross0_simple_rank_transfer')
     # [0.208, 0.336, 0.4, 0.464, 0.624]
-    rank_transfer_2grid('../pretrain/grid_cross0/cross_filter_pid.log', '../pretrain/grid_cross0/cross_filter_score.log')
-    test_rank_eval('../transfer/simple_rank_transfer_st.h5', 'grid_cross0_simple_st_rank_transfer')
+    # rank_transfer_2grid('', '../pretrain/grid_cross0/cross_filter_pid.log', '../pretrain/grid_cross0/cross_filter_score.log')
+    # test_rank_eval('../transfer/simple_rank_transfer_st.h5', 'grid_cross0_simple_st_rank_transfer')
     # [0.2, 0.336, 0.392, 0.456, 0.632]
+    pass
