@@ -1,5 +1,7 @@
 import sys
-from pretrain.eval import train_pair_predict,test_pair_predict, train_rank_predict, test_rank_eval
+
+from baseline.evaluate import market_result_eval, grid_result_eval
+from pretrain.eval import train_pair_predict,test_pair_predict, train_rank_predict, test_rank_predict
 from transfer.simple_rank_transfer import rank_transfer_2dataset
 
 
@@ -26,6 +28,7 @@ def vision_predict(source, target, train_pid_path, train_score_path, test_pid_pa
     target_gallery_path = target_dataset_path + '/gallery'
     train_pair_predict(source_model_path, target_train_path, train_pid_path, train_score_path)
     test_pair_predict(source_model_path, target_probe_path, target_gallery_path, test_pid_path, test_score_path)
+    predict_eval(target, target_dataset_path)
 
 
 def rank_transfer(source, target, fusion_train_rank_pids_path, fusion_train_rank_scores_path):
@@ -37,9 +40,23 @@ def rank_transfer(source, target, fusion_train_rank_pids_path, fusion_train_rank
     return target_model_path
 
 
-def rank_predict(transfer_train_rank_pids_path, transfer_train_rank_scores_path,
+def rank_predict(rank_model_path, target, transfer_train_rank_pids_path, transfer_train_rank_scores_path,
                     transfer_test_rank_pids_path, transfer_test_rank_scores_path):
-    return
+    source_model_path, target_dataset_path = get_source_target_info(source, target)
+    target_train_path = target_dataset_path + '/train'
+    target_probe_path = target_dataset_path + '/probe'
+    target_gallery_path = target_dataset_path + '/gallery'
+    train_rank_predict(rank_model_path, target_train_path, transfer_train_rank_pids_path, transfer_train_rank_scores_path)
+    test_rank_predict(rank_model_path, target_probe_path, target_gallery_path, transfer_test_rank_pids_path, transfer_test_rank_scores_path)
+    predict_eval(target, transfer_test_rank_pids_path)
+
+
+def predict_eval(target, predict_path):
+    if 'market' in target:
+        market_result_eval(predict_path)
+    elif 'grid' in target:
+        grid_result_eval(predict_path)
+
 
 if __name__ == '__main__':
     opt = sys.argv[1]
@@ -62,8 +79,13 @@ if __name__ == '__main__':
         transfer_train_rank_scores_path = sys.argv[7]
         transfer_test_rank_pids_path = sys.argv[8]
         transfer_test_rank_scores_path = sys.argv[9]
-        rank_transfer(source, target, fusion_train_rank_pids_path, fusion_train_rank_scores_path)
-        rank_predict(transfer_train_rank_pids_path, transfer_train_rank_scores_path,
+        rank_model_path = rank_transfer(source, target, fusion_train_rank_pids_path, fusion_train_rank_scores_path)
+        rank_predict(rank_model_path, target, transfer_train_rank_pids_path, transfer_train_rank_scores_path,
                     transfer_test_rank_pids_path, transfer_test_rank_scores_path)
+    elif opt == 2:
+        target = sys.argv[2]
+        predict_path = sys.argv[3]
+        predict_eval(target, predict_path)
+
     else:
         pass

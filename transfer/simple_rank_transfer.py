@@ -3,7 +3,7 @@ import os
 from keras import Input
 from keras.layers import Flatten, Lambda, Dense
 
-from pretrain.eval import test_rank_eval
+from pretrain.eval import test_rank_predict
 
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"  # see issue #152
 os.environ["CUDA_VISIBLE_DEVICES"] = "1"
@@ -182,6 +182,7 @@ def rank_transfer_2market():
         triplet_generator_by_rank_list(train_images, batch_size, similar_persons, similar_matrix, train=True),
         triplet_generator_by_rank_list(train_images, batch_size, similar_persons, similar_matrix, train=False),
         '../pretrain/pair_pretrain.h5',
+        'market2grid.h5',
         batch_size=batch_size
     )
 

@@ -58,7 +58,7 @@ def train_rank_predict(rank_model_path, target_train_path, pid_path, score_path)
     train_predict(model, target_train_path, pid_path, score_path)
 
 
-def test_rank_eval(rank_model_path, target_probe_path, target_gallery_path, pid_path, score_path):
+def test_rank_predict(rank_model_path, target_probe_path, target_gallery_path, pid_path, score_path):
     model = load_model(rank_model_path, custom_objects={'cross_entropy_loss': cross_entropy_loss})
     model = Model(inputs=[model.get_layer('resnet50').get_input_at(0)],
                   outputs=[model.get_layer('resnet50').get_output_at(0)])

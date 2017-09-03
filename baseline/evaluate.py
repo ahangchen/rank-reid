@@ -13,6 +13,7 @@ from keras.applications.resnet50 import preprocess_input
 from keras.models import Model
 from keras.backend.tensorflow_backend import set_session
 from keras.models import load_model
+from util import write
 
 '''
 DATASET = '../dataset/Duke'
@@ -155,9 +156,11 @@ def map_rank_eval(query_info, test_info, result_argsort):
             if hit == len(YES):
                 break
         mAP += ap
-
-    print('Rank 1:\t%f' % (rank_1 / QUERY_NUM))
-    print('mAP:\t%f' % (mAP / QUERY_NUM))
+    rank1_acc = rank_1 / QUERY_NUM
+    mAP = mAP / QUERY_NUM
+    print('Rank 1:\t%f' % rank1_acc)
+    print('mAP:\t%f' % mAP)
+    return rank1_acc, mAP
 
 
 def train_predict(net, train_path, pid_path, score_path):
@@ -187,14 +190,16 @@ def test_predict(net, probe_path, gallery_path, pid_path, score_path):
     # map_rank_eval(query_info, test_info, result_argsort)
 
 
-def file_result_eval(path):
-    res = np.genfromtxt(path, delimiter=' ')
+def market_result_eval(predict_path, log_path='market_eval.log'):
+    res = np.genfromtxt(predict_path, delimiter=' ')
     test_info = extract_info(TEST)
     query_info = extract_info(QUERY)
-    map_rank_eval(query_info, test_info, res)
+    rank1, mAP = map_rank_eval(query_info, test_info, res)
+    write(log_path, predict_path + '\n')
+    write(log_path, '%f\t%f\n' % (rank1, mAP))
 
 
-def grid_result_eval(predict_path):
+def grid_result_eval(predict_path, log_path='grid_eval.log'):
     pids4probes = np.genfromtxt(predict_path, delimiter=' ')
     probe_shoot = [0, 0, 0, 0, 0]
     for i, pids in enumerate(pids4probes):
@@ -217,6 +222,8 @@ def grid_result_eval(predict_path):
                         probe_shoot[k] += 1
                 break
     probe_acc = [shoot/len(pids4probes) for shoot in probe_shoot]
+    write(log_path, predict_path + '\n')
+    write(log_path, '%f\t%f\t%f\n' % (probe_shoot[0], probe_shoot[1], probe_shoot[2]))
     print(probe_acc)
 
 
