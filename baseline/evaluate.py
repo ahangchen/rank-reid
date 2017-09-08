@@ -15,24 +15,26 @@ from keras.backend.tensorflow_backend import set_session
 from keras.models import load_model
 from util import write
 
+project_path = '/home/cwh/coding/rank-reid'
+
 '''
-DATASET = '../dataset/Duke'
+DATASET = project_path + '../dataset/Duke'
 TEST = os.path.join(DATASET, 'bounding_box_test')
 TEST_NUM = 17661
 QUERY = os.path.join(DATASET, 'query')
 QUERY_NUM = 2228
 '''
 
-DATASET = '../dataset/Market'
-TEST = os.path.join(DATASET, 'bounding_box_test')
+DATASET = project_path + '/dataset/Market'
+TEST = os.path.join(DATASET, 'test')
 TEST_NUM = 19732
-TRAIN = os.path.join(DATASET, 'bounding_box_train')
+TRAIN = os.path.join(DATASET, 'train')
 TRAIN_NUM = 12936
-QUERY = os.path.join(DATASET, 'query')
+QUERY = os.path.join(DATASET, 'probe')
 QUERY_NUM = 3368
 
 '''
-DATASET = '../dataset/CUHK03'
+DATASET = project_path + '/dataset/CUHK03'
 TEST = os.path.join(DATASET, 'bbox_test')
 TEST_NUM = 5332
 QUERY = os.path.join(DATASET, 'query')
@@ -129,6 +131,8 @@ def map_rank_eval(query_info, test_info, result_argsort):
     mAP = 0.0
     test_num = min(TEST_NUM, len(result_argsort[0]))
     for idx in range(len(query_info)):
+        if idx % 100 == 0:
+            print('evaluate img %d' % idx)
         recall = 0.0
         precision = 1.0
         hit = 0.0
@@ -185,15 +189,18 @@ def test_predict(net, probe_path, gallery_path, pid_path, score_path):
         result[i] = result[i][result_argsort[i]]
     result = np.array(result)
     # ignore top1 because it's the origin image
-    np.savetxt(pid_path, result, fmt='%.4f')
-    np.savetxt(score_path, result_argsort, fmt='%d')
+    np.savetxt(pid_path, result_argsort, fmt='%d')
+    np.savetxt(score_path, result, fmt='%.4f')
     # map_rank_eval(query_info, test_info, result_argsort)
 
 
 def market_result_eval(predict_path, log_path='market_eval.log'):
     res = np.genfromtxt(predict_path, delimiter=' ')
+    print('predict info get, extract gallery info start')
     test_info = extract_info(TEST)
+    print('extract probe info start')
     query_info = extract_info(QUERY)
+    print('start evaluate map and rank acc')
     rank1, mAP = map_rank_eval(query_info, test_info, res)
     write(log_path, predict_path + '\n')
     write(log_path, '%f\t%f\n' % (rank1, mAP))
@@ -223,13 +230,15 @@ def grid_result_eval(predict_path, log_path='grid_eval.log'):
                 break
     probe_acc = [shoot/len(pids4probes) for shoot in probe_shoot]
     write(log_path, predict_path + '\n')
-    write(log_path, '%f\t%f\t%f\n' % (probe_shoot[0], probe_shoot[1], probe_shoot[2]))
+    write(log_path, '%.2f\t%.2f\t%.2f\n' % (probe_acc[0], probe_acc[1], probe_acc[2]))
+    print(predict_path)
     print(probe_acc)
-
 
 if __name__ == '__main__':
     # file_result_eval('../pretrain/test_renew_pid.log')
     # predict_eval()
     # grid_result_eval('../pretrain/grid_cross0_transfer/test_renew_pid.log')
-    grid_result_eval('/home/cwh/coding/TrackViz/data/top-m2g-std0-test/cross_filter_pid.log')
+    # grid_result_eval('/home/cwh/coding/rank-reid/vtep.log')
     # [0.504, 0.776, 0.84, 0.896, 0.968]
+    # market_result_eval('/home/cwh/coding/TrackViz/data/market_market-test/cross_filter_pid.log')
+    market_result_eval('../pretrain/market_market_pid_test.txt')

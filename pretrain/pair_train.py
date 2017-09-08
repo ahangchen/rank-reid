@@ -1,7 +1,8 @@
 import os
 
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"  # see issue #152
-os.environ["CUDA_VISIBLE_DEVICES"] = "1"
+os.environ["CUDA_VISIBLE_DEVICES"] = "2"
+
 import numpy as np
 from keras import Input
 from keras.callbacks import EarlyStopping, ReduceLROnPlateau, ModelCheckpoint
@@ -11,26 +12,29 @@ from keras.models import load_model
 from keras.preprocessing import image
 from keras.preprocessing.image import ImageDataGenerator
 from keras.utils import plot_model, to_categorical
-from keras.applications.resnet50 import preprocess_input
+from keras.applications.resnet50 import preprocess_input, ResNet50
 from numpy.random import randint, shuffle, choice
 
 
 def reid_data_prepare(data_list_path, train_dir_path):
     class_img_labels = dict()
-    cur_label = -2
+    class_cnt = -1
+    last_label = -2
     with open(data_list_path, 'r') as f:
         for line in f:
             line = line.strip()
-            img, lbl = line.split()
+            img = line
+            lbl = int(line.split('_')[0])
             img = image.load_img(os.path.join(train_dir_path, img), target_size=[224, 224])
             img = image.img_to_array(img)
             img = np.expand_dims(img, axis=0)
             img = preprocess_input(img)
-            if int(lbl) != cur_label:
+            if lbl != last_label:
+                class_cnt = class_cnt + 1
                 cur_list = list()
-                class_img_labels[lbl] = cur_list
-                cur_label = int(lbl)
-            class_img_labels[lbl].append(img[0])
+                class_img_labels[str(class_cnt)] = cur_list
+            class_img_labels[str(class_cnt)].append(img[0])
+            last_label = lbl
     return class_img_labels
 
 
@@ -94,8 +98,9 @@ def eucl_dist(inputs):
     return (x - y) ** 2
 
 
-def pair_model(single_model_path, num_classes):
-    base_model = load_model(single_model_path)
+def pair_model(num_classes):
+    base_model = load_model('../baseline/0.ckpt')
+    # base_model = ResNet50(weights='imagenet', include_top=False, input_tensor=Input(shape=(224, 224, 3)))
     base_model = Model(inputs=base_model.input, outputs=[base_model.get_layer('avg_pool').output], name='resnet50')
     img1 = Input(shape=(224, 224, 3), name='img_1')
     img2 = Input(shape=(224, 224, 3), name='img_2')
@@ -118,8 +123,8 @@ def pair_model(single_model_path, num_classes):
     return model
 
 
-def pair_tune(train_generator, val_generator, source_model_path, batch_size=48, num_classes=751):
-    model = pair_model(source_model_path, num_classes)
+def pair_tune(train_generator, val_generator, tune_dataset, batch_size=48, num_classes=751):
+    model = pair_model(num_classes)
     model.compile(optimizer='nadam',
                   loss={'ctg_out_1': 'categorical_crossentropy',
                         'ctg_out_2': 'categorical_crossentropy',
@@ -134,26 +139,43 @@ def pair_tune(train_generator, val_generator, source_model_path, batch_size=48, 
     early_stopping = EarlyStopping(monitor='val_loss', patience=3)
     auto_lr = ReduceLROnPlateau(monitor='val_loss', factor=0.1, patience=3, verbose=0, mode='auto', epsilon=0.0001,
                                 cooldown=0, min_lr=0)
-    save_model = ModelCheckpoint('resnet50-{epoch:02d}-{val_ctg_out_1_acc:.2f}.h5', period=2)
+    # save_model = ModelCheckpoint('resnet50-{epoch:02d}-{val_ctg_out_1_acc:.2f}.h5', period=2)
     model.fit_generator(train_generator,
                         steps_per_epoch=16500 / batch_size + 1,
                         epochs=30,
                         validation_data=val_generator,
                         validation_steps=1800 / batch_size + 1,
-                        callbacks=[early_stopping, auto_lr, save_model])
-    model.save('pair_pretrain.h5')
+                        callbacks=[early_stopping, auto_lr])
+    model.save(tune_dataset + '_pair_pretrain.h5')
 
 
-if __name__ == '__main__':
-    DATASET = '../dataset/Market'
-    LIST = os.path.join(DATASET, 'pretrain.list')
-    TRAIN = os.path.join(DATASET, 'bounding_box_train')
+
+def pair_pretrain_on_dataset(source):
+    project_path = '/home/cwh/coding/rank-reid'
+    if source == 'market':
+        train_list = project_path + '/dataset/market_train.list'
+        train_dir = '/home/cwh/coding/Market-1501/train'
+    elif source == 'grid':
+        train_list = project_path + '/dataset/grid_train.list'
+        train_dir = '/home/cwh/coding/grid_label'
+    elif source == 'cuhk':
+        train_list = project_path + '/dataset/cuhk_train.list'
+        train_dir = '/home/cwh/coding/cuhk01'
+    elif source == 'viper':
+        train_list = project_path + '/dataset/viper_train.list'
+        train_dir = '/home/cwh/coding/viper'
+    else:
+        train_list = 'unknown'
+        train_dir = 'unknown'
     class_count = 751
-    class_img_labels = reid_data_prepare(LIST, TRAIN)
+    class_img_labels = reid_data_prepare(train_list, train_dir)
     batch_size = 64
     pair_tune(
         pair_generator(class_img_labels, batch_size=batch_size, train=True),
         pair_generator(class_img_labels, batch_size=batch_size, train=False),
-        '../baseline/0.ckpt',
+        source,
         batch_size=batch_size, num_classes=class_count
     )
+
+if __name__ == '__main__':
+    pair_pretrain_on_dataset('market')

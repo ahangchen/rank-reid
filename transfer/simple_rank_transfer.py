@@ -3,8 +3,6 @@ import os
 from keras import Input
 from keras.layers import Flatten, Lambda, Dense
 
-from pretrain.eval import test_rank_predict
-
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"  # see issue #152
 os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 import numpy as np
@@ -187,9 +185,8 @@ def rank_transfer_2market():
     )
 
 
-def rank_transfer_2dataset(source_pair_model_path, target_model_path, target_train_path, rank_pid_path, rank_score_path):
-    LIST = target_train_path + '/test_track.txt'
-    train_images = reid_img_prepare(LIST, target_train_path)
+def rank_transfer_2dataset(source_pair_model_path, target_train_list, target_model_path, target_train_path, rank_pid_path, rank_score_path):
+    train_images = reid_img_prepare(target_train_list, target_train_path)
     batch_size = 64
     similar_persons = np.genfromtxt(rank_pid_path, delimiter=' ')
     if 'cross' in rank_pid_path:

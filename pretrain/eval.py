@@ -3,7 +3,7 @@ from keras.engine import Model
 from keras.models import load_model
 
 from baseline.evaluate import train_predict, test_predict, grid_result_eval
-from transfer.rank_transfer import cross_entropy_loss
+from transfer.simple_rank_transfer import cross_entropy_loss
 from util import safe_mkdir
 
 
@@ -39,15 +39,15 @@ def grid_test_base_eval(model_path, log_dir_path):
 
 def train_pair_predict(pair_model_path, target_train_path, pid_path, score_path):
     model = load_model(pair_model_path)
-    model = Model(inputs=[model.get_layer('model_1').get_input_at(0)],
-                  outputs=[model.get_layer('model_1').get_output_at(0)])
+    model = Model(inputs=[model.get_layer('resnet50').get_input_at(0)],
+                  outputs=[model.get_layer('resnet50').get_output_at(0)])
     train_predict(model, target_train_path, pid_path, score_path)
 
 
 def test_pair_predict(pair_model_path, target_probe_path, target_gallery_path, pid_path, score_path):
     model = load_model(pair_model_path)
-    model = Model(inputs=[model.get_layer('model_1').get_input_at(0)],
-                  outputs=[model.get_layer('model_1').get_output_at(0)])
+    model = Model(inputs=[model.get_layer('resnet50').get_input_at(0)],
+                  outputs=[model.get_layer('resnet50').get_output_at(0)])
     test_predict(model, target_probe_path, target_gallery_path, pid_path, score_path)
 
 
@@ -66,7 +66,7 @@ def test_rank_predict(rank_model_path, target_probe_path, target_gallery_path, p
 
 
 if __name__ == '__main__':
-    train_pair_predict('../transfer/pair_pretrain.h5', 'grid_train', '/home/cwh/coding/grid_train_probe_gallery/cross0')
+    # train_pair_predict('market_pair_pretrain.h5', '/home/cwh/coding/grid_train_probe_gallery/cross0/train', 'market_grid_pid.txt', 'market_grid_score.txt')
     # grid_test_base_eval('../baseline/0.ckpt', 'grid_cross0_single')
     # cross0: [0.072, 0.144, 0.184, 0.232, 0.408]
     # cross0_gan: [0.136, 0.344, 0.416, 0.544, 0.648]
@@ -77,3 +77,4 @@ if __name__ == '__main__':
     # [0.192, 0.312, 0.392, 0.48, 0.648] st epoch3
     # grid_test_rank_eval('../transfer/rank_transfer.h5', 'grid_cross0_rank_transfer')
     # [0.184, 0.304, 0.344, 0.456, 0.656]
+    test_pair_predict('market_pair_pretrain.h5', '/home/cwh/coding/Market-1501/probe', '/home/cwh/coding/Market-1501/test', 'market_market_pid_test.txt', 'market_market_score_test.txt')
