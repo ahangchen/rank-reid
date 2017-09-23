@@ -58,12 +58,12 @@ def extract_feature(dir_path, net):
     infos = []
     num = 0
     for image_name in sorted(os.listdir(dir_path)):
-        if 'jpeg' in image_name or 'png' in image_name:
+        if 's' not in image_name:
             # grid
             arr = image_name.split('_')
             person = int(arr[0])
             camera = int(arr[1])
-        elif 'jpg' in image_name:
+        elif 's' in image_name:
             #market
             arr = image_name.split('_')
             person = int(arr[0])
@@ -105,8 +105,6 @@ def similarity_matrix(query_f, test_f):
 def sort_similarity(query_f, test_f):
     result = similarity_matrix(query_f, test_f)
     result_argsort = np.argsort(-result, axis=1)
-    print(result_argsort.shape)
-    np.savetxt('resnet50_predict_market.txt', result_argsort, fmt='%d')
     return result, result_argsort
 
 
@@ -194,7 +192,7 @@ def test_predict(net, probe_path, gallery_path, pid_path, score_path):
     # map_rank_eval(query_info, test_info, result_argsort)
 
 
-def market_result_eval(predict_path, log_path='market_eval.log'):
+def market_result_eval(predict_path, log_path='market_eval_0.log'):
     res = np.genfromtxt(predict_path, delimiter=' ')
     print('predict info get, extract gallery info start')
     test_info = extract_info(TEST)
@@ -241,4 +239,12 @@ if __name__ == '__main__':
     # grid_result_eval('/home/cwh/coding/rank-reid/vtep.log')
     # [0.504, 0.776, 0.84, 0.896, 0.968]
     # market_result_eval('/home/cwh/coding/TrackViz/data/market_market-test/cross_filter_pid.log')
-    market_result_eval('../pretrain/market_market_pid_test.txt')
+    market_result_eval('/home/cwh/coding/TrackViz/data/viper_market-test/renew_pid.log')
+    market_result_eval('/home/cwh/coding/TrackViz/data/viper_market-test/cross_filter_pid.log')
+    market_result_eval('/home/cwh/coding/TrackViz/data/viper_market-r-test/renew_pid.log')
+    market_result_eval('/home/cwh/coding/TrackViz/data/viper_market-r-test/cross_filter_pid.log')
+
+    market_result_eval('/home/cwh/coding/TrackViz/data/cuhk_market-test/renew_pid.log')
+    market_result_eval('/home/cwh/coding/TrackViz/data/cuhk_market-test/cross_filter_pid.log')
+    market_result_eval('/home/cwh/coding/TrackViz/data/cuhk_market-r-test/renew_pid.log')
+    market_result_eval('/home/cwh/coding/TrackViz/data/cuhk_market-r-test/cross_filter_pid.log')

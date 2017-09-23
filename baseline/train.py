@@ -4,6 +4,7 @@ import os
 from random import shuffle
 
 import numpy as np
+from keras.callbacks import EarlyStopping, ReduceLROnPlateau
 
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"  # see issue #152
 os.environ["CUDA_VISIBLE_DEVICES"] = "1"
@@ -42,19 +43,25 @@ TRAIN = os.path.join(DATASET, 'bbox_train')
 '''
 
 
-def load_data(DATASET, LIST, TRAIN):
+def load_data(LIST, TRAIN):
     images, labels = [], []
     with open(LIST, 'r') as f:
+        last_label = -1
+        label_cnt = -1
         for line in f:
             line = line.strip()
-            img, lbl = line.split()
+            img = line
+            lbl = line.split('_')[0]
+            if last_label != lbl:
+                label_cnt += 1
+            last_label = lbl
             img = image.load_img(os.path.join(TRAIN, img), target_size=[224, 224])
             img = image.img_to_array(img)
             img = np.expand_dims(img, axis=0)
             img = preprocess_input(img)
 
             images.append(img[0])
-            labels.append(int(lbl))
+            labels.append(label_cnt)
 
     img_cnt = len(labels)
     shuffle_idxes = range(img_cnt)
@@ -69,8 +76,8 @@ def load_data(DATASET, LIST, TRAIN):
     return images, labels
 
 
-def pretrain(DATASET, LIST, TRAIN, class_count):
-    images, labels = load_data(DATASET, LIST, TRAIN)
+def softmax_model_pretrain(train_list, train_dir, class_count, target_model_path):
+    images, labels = load_data(train_list, train_dir)
     config = tf.ConfigProto()
     config.gpu_options.allow_growth = True
 
@@ -100,12 +107,46 @@ def pretrain(DATASET, LIST, TRAIN, class_count):
     val_datagen = ImageDataGenerator()
 
     net.compile(optimizer=SGD(lr=0.001, momentum=0.9), loss='categorical_crossentropy', metrics=['accuracy'])
-    net.fit_generator(train_datagen.flow(images[: int(0.9 * img_cnt)], labels[: int(0.9 * img_cnt)], batch_size=batch_size),
-                      steps_per_epoch=len(images) / batch_size + 1, epochs=20,
-                      validation_data=val_datagen.flow(images[int(0.9 * img_cnt):], labels[int(0.9 * img_cnt):],
-                                                       batch_size=batch_size),
-                      validation_steps=img_cnt / 10 / batch_size + 1)
-    net.save('0.ckpt')
+    # net.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
+    early_stopping = EarlyStopping(monitor='val_loss', patience=3)
+    # auto_lr = ReduceLROnPlateau(monitor='val_loss', factor=0.1, patience=3, verbose=0, mode='auto', epsilon=0.0001,
+    #                             cooldown=0, min_lr=0)
+    net.fit_generator(
+        train_datagen.flow(images[: int(0.9 * img_cnt)], labels[: int(0.9 * img_cnt)], batch_size=batch_size),
+        steps_per_epoch=len(images) / batch_size + 1, epochs=20,
+        validation_data=val_datagen.flow(images[int(0.9 * img_cnt):], labels[int(0.9 * img_cnt):],
+                                         batch_size=batch_size),
+        validation_steps=img_cnt / 10 / batch_size + 1)
+    net.save(target_model_path)
+
+
+def softmax_pretrain_on_dataset(source):
+    project_path = '/home/cwh/coding/rank-reid'
+    if source == 'market':
+        train_list = project_path + '/dataset/market_train.list'
+        train_dir = '/home/cwh/coding/Market-1501/train'
+        class_count = 751
+    elif source == 'grid':
+        train_list = project_path + '/dataset/grid_train.list'
+        train_dir = '/home/cwh/coding/grid_label'
+        class_count = 250
+    elif source == 'cuhk':
+        train_list = project_path + '/dataset/cuhk_train.list'
+        train_dir = '/home/cwh/coding/cuhk01'
+        class_count = 971
+    elif source == 'viper':
+        train_list = project_path + '/dataset/viper_train.list'
+        train_dir = '/home/cwh/coding/viper'
+        class_count = 630
+    else:
+        train_list = 'unknown'
+        train_dir = 'unknown'
+        class_count = -1
+    softmax_model_pretrain(train_list, train_dir, class_count, '../pretrain/' + source + '_softmax_pretrain.h5')
+
 
 if __name__ == '__main__':
-    pretrain(DATASET, LIST, TRAIN, class_count)
+    # sources = ['market', 'grid', 'cuhk', 'viper']
+    sources = ['grid']
+    for source in sources:
+        softmax_pretrain_on_dataset(source)

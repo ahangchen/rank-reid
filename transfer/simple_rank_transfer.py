@@ -208,4 +208,9 @@ if __name__ == '__main__':
     # rank_transfer_2grid('', '../pretrain/grid_cross0/cross_filter_pid.log', '../pretrain/grid_cross0/cross_filter_score.log')
     # test_rank_eval('../transfer/simple_rank_transfer_st.h5', 'grid_cross0_simple_st_rank_transfer')
     # [0.2, 0.336, 0.392, 0.456, 0.632]
-    pass
+
+    rank_transfer_2dataset('../pretrain/market_pair_pretrain.h5', '../dataset/grid_train.list', 'rank_test.h5',
+                           '/home/cwh/coding/grid_label',
+                           '/home/cwh/coding/TrackViz/data/market_grid-cv0-train/cross_filter_pid.log',
+                           '/home/cwh/coding/TrackViz/data/market_grid-cv0-train/cross_filter_score.log')
+

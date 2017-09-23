@@ -1,18 +1,19 @@
 import os
 
+from baseline.train import softmax_pretrain_on_dataset
+
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"  # see issue #152
-os.environ["CUDA_VISIBLE_DEVICES"] = "2"
+os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 
 import numpy as np
 from keras import Input
-from keras.callbacks import EarlyStopping, ReduceLROnPlateau, ModelCheckpoint
+from keras.callbacks import EarlyStopping, ReduceLROnPlateau
 from keras.engine import Model
 from keras.layers import Lambda, Dense, Dropout, Flatten
 from keras.models import load_model
 from keras.preprocessing import image
-from keras.preprocessing.image import ImageDataGenerator
 from keras.utils import plot_model, to_categorical
-from keras.applications.resnet50 import preprocess_input, ResNet50
+from keras.applications.resnet50 import preprocess_input
 from numpy.random import randint, shuffle, choice
 
 
@@ -25,16 +26,19 @@ def reid_data_prepare(data_list_path, train_dir_path):
             line = line.strip()
             img = line
             lbl = int(line.split('_')[0])
-            img = image.load_img(os.path.join(train_dir_path, img), target_size=[224, 224])
-            img = image.img_to_array(img)
-            img = np.expand_dims(img, axis=0)
-            img = preprocess_input(img)
             if lbl != last_label:
                 class_cnt = class_cnt + 1
                 cur_list = list()
                 class_img_labels[str(class_cnt)] = cur_list
-            class_img_labels[str(class_cnt)].append(img[0])
             last_label = lbl
+
+            img = image.load_img(os.path.join(train_dir_path, img), target_size=[224, 224])
+            img = image.img_to_array(img)
+            img = np.expand_dims(img, axis=0)
+            img = preprocess_input(img)
+
+            class_img_labels[str(class_cnt)].append(img[0])
+
     return class_img_labels
 
 
@@ -98,8 +102,8 @@ def eucl_dist(inputs):
     return (x - y) ** 2
 
 
-def pair_model(num_classes):
-    base_model = load_model('../baseline/0.ckpt')
+def pair_model(source_model_path, num_classes):
+    base_model = load_model(source_model_path)
     # base_model = ResNet50(weights='imagenet', include_top=False, input_tensor=Input(shape=(224, 224, 3)))
     base_model = Model(inputs=base_model.input, outputs=[base_model.get_layer('avg_pool').output], name='resnet50')
     img1 = Input(shape=(224, 224, 3), name='img_1')
@@ -123,8 +127,8 @@ def pair_model(num_classes):
     return model
 
 
-def pair_tune(train_generator, val_generator, tune_dataset, batch_size=48, num_classes=751):
-    model = pair_model(num_classes)
+def pair_tune(source_model_path, train_generator, val_generator, tune_dataset, batch_size=48, num_classes=751):
+    model = pair_model(source_model_path, num_classes)
     model.compile(optimizer='nadam',
                   loss={'ctg_out_1': 'categorical_crossentropy',
                         'ctg_out_2': 'categorical_crossentropy',
@@ -155,22 +159,27 @@ def pair_pretrain_on_dataset(source):
     if source == 'market':
         train_list = project_path + '/dataset/market_train.list'
         train_dir = '/home/cwh/coding/Market-1501/train'
+        class_count = 751
     elif source == 'grid':
         train_list = project_path + '/dataset/grid_train.list'
         train_dir = '/home/cwh/coding/grid_label'
+        class_count = 250
     elif source == 'cuhk':
         train_list = project_path + '/dataset/cuhk_train.list'
         train_dir = '/home/cwh/coding/cuhk01'
+        class_count = 971
     elif source == 'viper':
         train_list = project_path + '/dataset/viper_train.list'
         train_dir = '/home/cwh/coding/viper'
+        class_count = 630
     else:
         train_list = 'unknown'
         train_dir = 'unknown'
-    class_count = 751
+        class_count = -1
     class_img_labels = reid_data_prepare(train_list, train_dir)
     batch_size = 64
     pair_tune(
+        source + '_softmax_pretrain.h5',
         pair_generator(class_img_labels, batch_size=batch_size, train=True),
         pair_generator(class_img_labels, batch_size=batch_size, train=False),
         source,
@@ -178,4 +187,10 @@ def pair_pretrain_on_dataset(source):
     )
 
 if __name__ == '__main__':
-    pair_pretrain_on_dataset('market')
+    # pair_pretrain_on_dataset('market')
+
+    sources = ['grid', 'market', 'cuhk', 'viper']
+    for source in sources:
+        softmax_pretrain_on_dataset(source)
+        pair_pretrain_on_dataset(source)
+
