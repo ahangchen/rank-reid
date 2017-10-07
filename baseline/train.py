@@ -138,6 +138,11 @@ def softmax_pretrain_on_dataset(source):
         train_list = project_path + '/dataset/viper_train.list'
         train_dir = '/home/cwh/coding/viper'
         class_count = 630
+    elif 'grid-cv' in source:
+        cv_idx = int(source.split('-')[-1])
+        train_list = project_path + '/dataset/grid-cv/%d.list' % cv_idx
+        train_dir = '/home/cwh/coding/underground_reid/cross%d/train' % cv_idx
+        class_count = 125
     else:
         train_list = 'unknown'
         train_dir = 'unknown'

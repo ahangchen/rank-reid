@@ -6,15 +6,7 @@ from transfer.simple_rank_transfer import rank_transfer_2dataset
 
 
 def get_source_target_info(source, target):
-    source_model_path = 'pair_pretrain.h5'
-    if source == 'market':
-        source_model_path = '/home/cwh/coding/rank-reid/pretrain/market_' + source_model_path
-    elif source == 'grid':
-        source_model_path = '/home/cwh/coding/rank-reid/pretrain/grid_' + source_model_path
-    elif source == 'cuhk':
-        source_model_path = '/home/cwh/coding/rank-reid/pretrain/cuhk_' + source_model_path
-    elif source == 'viper':
-        source_model_path = '/home/cwh/coding/rank-reid/pretrain/viper_' + source_model_path
+    source_model_path = '/home/cwh/coding/rank-reid/pretrain/%s_pair_pretrain.h5' % source
     target_dataset_path = ''
     if target == 'market':
         target_dataset_path = '/home/cwh/coding/Market-1501'
@@ -30,8 +22,7 @@ def vision_predict(source, target, train_pid_path, train_score_path, test_pid_pa
     target_gallery_path = target_dataset_path + '/test'
     train_pair_predict(source_model_path, target_train_path, train_pid_path, train_score_path)
     test_pair_predict(source_model_path, target_probe_path, target_gallery_path, test_pid_path, test_score_path)
-    if 'market' not in target:
-        predict_eval(target, test_pid_path)
+    predict_eval(target, test_pid_path)
 
 
 def rank_transfer(source, target, target_train_list, fusion_train_rank_pids_path, fusion_train_rank_scores_path):
