@@ -55,7 +55,7 @@ def grid_eval(source, transform_dir):
 
 def market_eval(source, transform_dir):
     target = 'market'
-    test_pair_predict(source + '_pair_pretrain.h5',
+    test_pair_predict(source + '_softmax_pretrain.h5',
                      transform_dir +  '/probe', transform_dir +  '/test',
                      source + '_' + target + '_pid.log', source + '_' + target + '_score.log')
 
@@ -78,4 +78,4 @@ if __name__ == '__main__':
     # [0.104, 0.176, 0.264, 0.312, 0.416]
     # grid_eval('market', '/home/wxt/ReidGAN/transformgrid2marketstyle')
     # market_eval('grid', '/home/wxt/ReidGAN/market2grid_style')
-    market_eval('grid', '/home/cwh/coding/Market-1501')
+    market_eval('market', '/home/cwh/coding/Market-1501')
