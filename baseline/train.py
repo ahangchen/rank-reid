@@ -98,7 +98,7 @@ def softmax_model_pretrain(train_list, train_dir, class_count, target_model_path
 
     img_cnt = len(labels)
     # pretrain
-    batch_size = 16
+    batch_size =16
     train_datagen = ImageDataGenerator(
         shear_range=0.2,
         width_shift_range=0.2,  # 0.
@@ -113,13 +113,13 @@ def softmax_model_pretrain(train_list, train_dir, class_count, target_model_path
     #                             cooldown=0, min_lr=0)
     # net.fit_generator(
     #     train_datagen.flow(images[: int(0.9 * img_cnt)], labels[: int(0.9 * img_cnt)], batch_size=batch_size),
-    #     steps_per_epoch=len(images) / batch_size + 1, epochs=20,
+    #     steps_per_epoch=len(images) / batch_size + 1, epochs=40,
     #     validation_data=val_datagen.flow(images[int(0.9 * img_cnt):], labels[int(0.9 * img_cnt):],
     #                                      batch_size=batch_size),
     #     validation_steps=img_cnt / 10 / batch_size + 1)
     net.fit_generator(
         train_datagen.flow(images, labels, batch_size=batch_size),
-        steps_per_epoch=len(images) / batch_size + 1, epochs=20,
+        steps_per_epoch=len(images) / batch_size + 1, epochs=40,
         )
     net.save(target_model_path)
 

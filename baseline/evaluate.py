@@ -4,8 +4,8 @@ import os
 
 import numpy as np
 
-os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"  # see issue #152
-os.environ["CUDA_VISIBLE_DEVICES"] = "1"
+# os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"  # see issue #152
+# os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 import tensorflow as tf
 
 from keras.preprocessing import image
@@ -47,9 +47,18 @@ def extract_info(dir_path):
     for image_name in sorted(os.listdir(dir_path)):
         if '.txt' in image_name:
             continue
-        arr = image_name.split('_')
-        person = int(arr[0])
-        camera = int(arr[1][1])
+        if 's' not in image_name:
+            # grid
+            arr = image_name.split('_')
+            person = int(arr[0])
+            camera = int(arr[1])
+        elif 's' in image_name:
+            #market
+            arr = image_name.split('_')
+            person = int(arr[0])
+            camera = int(arr[1][1])
+        else:
+            continue
         infos.append((person, camera))
 
     return infos
@@ -60,6 +69,8 @@ def extract_feature(dir_path, net):
     infos = []
     num = 0
     for image_name in sorted(os.listdir(dir_path)):
+        # if num > 2:
+        #     break
         if '.txt' in image_name:
             continue
         if 's' not in image_name:
@@ -82,6 +93,7 @@ def extract_feature(dir_path, net):
         feature = net.predict(x)
         features.append(np.squeeze(feature))
         infos.append((person, camera))
+        # num += 1
 
     return features, infos
 
