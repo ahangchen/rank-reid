@@ -102,8 +102,8 @@ def pair_generator(class_img_labels, batch_size, train=False):
 
 def eucl_dist(inputs):
     x, y = inputs
-    # return K.mean(K.square((x - y)), axis=1)
-    return K.square((x - y))
+    return K.mean(K.square((x - y)), axis=1)
+    # return K.square((x - y))
 
 
 def dis_sigmoid(dis):
