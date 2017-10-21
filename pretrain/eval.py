@@ -117,12 +117,12 @@ def faster_test_pair_acc_predict(pair_model_path, target_probe_path, target_gall
     input1 = Input(shape=(2048,), name='input1')
     input2 = Input(shape=(2048,), name='input2')
     dis = Lambda(eucl_dist, name='square')([input1, input2])
-    judge = Lambda(dis_sigmoid, name='bin_out')(dis)
-    # judge = Dense(1, activation='sigmoid', name='bin_out')(dis)
+    # judge = Lambda(dis_sigmoid, name='bin_out')(dis)
+    judge = Dense(1, activation='sigmoid', name='bin_out')(dis)
     # dis = Lambda(avg_eucl_dist, name='square')([input1, input2])
     eval_net = Model(inputs=[input1, input2], outputs=[judge])
     # eval_net = Model(inputs=[input1, input2], outputs=[dis])
-    # eval_net.get_layer('bin_out').set_weights(pair_model.get_layer('bin_out').get_weights())
+    eval_net.get_layer('bin_out').set_weights(pair_model.get_layer('bin_out').get_weights())
 
     similarity_matrix = []
     for i, query_f in enumerate(query_f_s):
@@ -171,7 +171,7 @@ def grid_eval(source, transform_dir):
 
 def market_eval(source, transform_dir):
     target = 'market'
-    faster_test_pair_acc_predict(source + '_pair_pretrain.h5',
+    test_pair_predict(source + '_pair_pretrain.h5',
                           transform_dir + '/probe', transform_dir + '/test',
                           source + '_' + target + '_pid.log', source + '_' + target + '_score.log')
 
@@ -195,5 +195,6 @@ if __name__ == '__main__':
     # [0.104, 0.176, 0.264, 0.312, 0.416]
     # grid_eval('market', '/home/wxt/ReidGAN/transformgrid2marketstyle')
     # market_eval('grid', '/home/wxt/ReidGAN/market2grid_style')
-    market_eval('market', '/home/cwh/coding/Market-1501')
-    market_result_eval('market_market_pid.log')
+    # market_eval('market', '/home/cwh/coding/Market-1501')
+    # market_result_eval('market_market_pid.log')
+    market_result_eval('/home/cwh/coding/TrackViz/data/market_market-test/cross_filter_pid.log')

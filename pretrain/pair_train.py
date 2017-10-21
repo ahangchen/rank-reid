@@ -102,8 +102,8 @@ def pair_generator(class_img_labels, batch_size, train=False):
 
 def eucl_dist(inputs):
     x, y = inputs
-    return K.mean(K.square((x - y)), axis=1)
-    # return K.square((x - y))
+    # return K.mean(K.square((x - y)), axis=1)
+    return K.square((x - y))
 
 
 def dis_sigmoid(dis):
@@ -119,8 +119,8 @@ def pair_model(source_model_path, num_classes):
     feature1 = Flatten()(base_model(img1))
     feature2 = Flatten()(base_model(img2))
     dis = Lambda(eucl_dist, name='square')([feature1, feature2])
-    judge = Lambda(dis_sigmoid, name='bin_out')(dis)
-    # judge = Dense(1, activation='sigmoid', name='bin_out')(Dropout(0.9)(dis))
+    # judge = Lambda(dis_sigmoid, name='bin_out')(dis)
+    judge = Dense(1, activation='sigmoid', name='bin_out')(Dropout(0.9)(dis))
     category_predict1 = Dense(num_classes, activation='softmax', name='ctg_out_1')(
         Dropout(0.9)(feature1)
     )
@@ -131,9 +131,9 @@ def pair_model(source_model_path, num_classes):
     model.get_layer('ctg_out_1').set_weights(softmax_model.get_layer('fc8').get_weights())
     model.get_layer('ctg_out_2').set_weights(softmax_model.get_layer('fc8').get_weights())
     plot_model(model, to_file='model_combined.png')
-    for layer in base_model.layers[:-20]:
-        layer.trainable = False
-    for layer in base_model.layers[-20:]:
+    # for layer in base_model.layers[:-10]:
+    #     layer.trainable = False
+    for layer in base_model.layers:
         layer.trainable = True
     return model
 
@@ -146,7 +146,7 @@ def common_lr(epoch):
 
 def pair_tune(source_model_path, train_generator, val_generator, tune_dataset, batch_size=48, num_classes=751):
     model = pair_model(source_model_path, num_classes)
-    model.compile(optimizer=SGD(lr=0.0001, momentum=0.9),
+    model.compile(optimizer=SGD(lr=0.001, momentum=0.9),
                   loss={'ctg_out_1': 'categorical_crossentropy',
                         'ctg_out_2': 'categorical_crossentropy',
                         'bin_out': 'binary_crossentropy'},
