@@ -5,7 +5,7 @@ from keras.optimizers import SGD
 from baseline.train import softmax_pretrain_on_dataset
 
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"  # see issue #152
-os.environ["CUDA_VISIBLE_DEVICES"] = "1"
+os.environ["CUDA_VISIBLE_DEVICES"] = "1,0"
 
 import numpy as np
 from keras import Input
