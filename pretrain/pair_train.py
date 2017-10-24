@@ -5,7 +5,7 @@ from keras.optimizers import SGD
 from baseline.train import softmax_pretrain_on_dataset
 
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"  # see issue #152
-os.environ["CUDA_VISIBLE_DEVICES"] = "1,0"
+os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 
 import numpy as np
 from keras import Input
@@ -211,13 +211,13 @@ def pair_pretrain_on_dataset(source):
 if __name__ == '__main__':
     # pair_pretrain_on_dataset('market')
 
-    # sources = ['grid', 'market', 'cuhk', 'viper']
-    sources = ['market']
-    for source in sources:
-        # softmax_pretrain_on_dataset(source)
-        pair_pretrain_on_dataset(source)
-    # sources = ['grid-cv-%d' % i for i in range(10)]
+    # sources = ['grid', 'cuhk', 'viper']
+    # # sources = ['market']
     # for source in sources:
     #     softmax_pretrain_on_dataset(source)
     #     pair_pretrain_on_dataset(source)
+    sources = ['grid-cv-%d' % i for i in range(10)]
+    for source in sources:
+        softmax_pretrain_on_dataset(source)
+        pair_pretrain_on_dataset(source)
 

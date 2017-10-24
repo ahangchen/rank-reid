@@ -4,7 +4,7 @@ from keras import Input
 from keras.layers import Flatten, Lambda, Dense
 
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"  # see issue #152
-os.environ["CUDA_VISIBLE_DEVICES"] = "0,1"
+os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 import numpy as np
 from keras.callbacks import EarlyStopping, ReduceLROnPlateau
 from keras.engine import Model
@@ -64,7 +64,7 @@ def gen_right_img_infos(cur_epoch, similar_matrix, similar_persons, left_img_ids
         # select from last match for negative
         left_similar_persons = similar_persons[left_img_ids]
         left_similar_matrix = similar_matrix[left_img_ids]
-        right_img_ids, right_img_scores = gen_pos_right_img_ids(left_similar_persons, left_similar_matrix,batch_size)
+        right_img_ids, right_img_scores = gen_pos_right_img_ids(left_similar_persons, left_similar_matrix, batch_size)
     else:
         # select from last match for negative
         left_similar_persons = similar_persons[left_img_ids]
@@ -82,14 +82,14 @@ def triplet_generator_by_rank_list(train_images, batch_size, similar_persons, si
     while True:
         left_img_ids = randint(img_cnt, size=batch_size)
         right_img_ids1, right_img_scores1 = gen_right_img_infos(cur_epoch,
-                                                           similar_matrix, similar_persons,
-                                                           left_img_ids,
-                                                           img_cnt, batch_size)
+                                                                similar_matrix, similar_persons,
+                                                                left_img_ids,
+                                                                img_cnt, batch_size)
         cur_epoch += 1
         right_img_ids2, right_img_scores2 = gen_right_img_infos(cur_epoch,
-                                                           similar_matrix, similar_persons,
-                                                           left_img_ids,
-                                                           img_cnt, batch_size)
+                                                                similar_matrix, similar_persons,
+                                                                left_img_ids,
+                                                                img_cnt, batch_size)
         left_images = train_images[left_img_ids]
         right_images1 = train_images[right_img_ids1]
         right_images2 = train_images[right_img_ids2]
@@ -134,7 +134,7 @@ def rank_transfer_model(pair_model_path):
     model.get_layer('score2').set_weights(pair_model.get_layer('bin_out').get_weights())
     plot_model(model, to_file='rank_model.png')
 
-    for layer in base_model.layers[:len(base_model.layers)/2]:
+    for layer in base_model.layers:
         layer.trainable = False
     return model
 
@@ -146,7 +146,7 @@ def rank_transfer(train_generator, val_generator, source_model_path, target_mode
                   loss={
                       'sub_score': cross_entropy_loss
                       # 'sub_score': 'mse',
-                    },
+                  },
                   loss_weights={
                       'sub_score': 1.
                   },
@@ -185,7 +185,8 @@ def rank_transfer_2market():
     )
 
 
-def rank_transfer_2dataset(source_pair_model_path, target_train_list, target_model_path, target_train_path, rank_pid_path, rank_score_path):
+def rank_transfer_2dataset(source_pair_model_path, target_train_list, target_model_path, target_train_path,
+                           rank_pid_path, rank_score_path):
     train_images = reid_img_prepare(target_train_list, target_train_path)
     batch_size = 16
     similar_persons = np.genfromtxt(rank_pid_path, delimiter=' ')
@@ -209,8 +210,8 @@ if __name__ == '__main__':
     # test_rank_eval('../transfer/simple_rank_transfer_st.h5', 'grid_cross0_simple_st_rank_transfer')
     # [0.2, 0.336, 0.392, 0.456, 0.632]
     # m = load_model('../pretrain/market_pair_pretrain.h5')
-    rank_transfer_2dataset('../pretrain/market_pair_pretrain.h5', '../dataset/market_train.list', 'rank_test.h5',
+    rank_transfer_2dataset('../pretrain/market_pair_pretrain.h5', '../dataset/market_train.list',
+                           'rank_transfer_test.h5',
                            '/home/cwh/coding/Market-1501/train',
                            '/home/cwh/coding/TrackViz/data/market_market-train/cross_filter_pid.log',
                            '/home/cwh/coding/TrackViz/data/market_market-train/cross_filter_score.log')
-

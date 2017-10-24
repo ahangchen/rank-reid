@@ -198,7 +198,10 @@ if __name__ == '__main__':
     # market_eval('market', '/home/cwh/coding/Market-1501')
     # market_result_eval('market_market_pid.log')
     # market_result_eval('/home/cwh/coding/TrackViz/data/market_market-test/cross_filter_pid.log')
-    # test_rank_predict('../transfer/rank_test.h5',
+    # test_rank_predict('../transfer/rank_transfer_test.h5',
     #                   '/home/cwh/coding/Market-1501/probe', '/home/cwh/coding/Market-1501/test',
     #                   'rank_pid.log', 'rank_ac.log')
-    market_result_eval('rank_pid.log')
+    # market_result_eval('rank_pid.log')
+    # grid_result_eval('/home/cwh/coding/TrackViz/data/market_grid-cv0-test/cross_filter_pid.log')
+    market_result_eval('/home/cwh/coding/TrackViz/data/market_market-test/cross_filter_pid.log')
+
