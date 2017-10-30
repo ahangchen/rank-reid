@@ -2,8 +2,7 @@ import os
 
 from pretrain.eval import test_pair_predict
 
-os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"  # see issue #152
-os.environ["CUDA_VISIBLE_DEVICES"] = "1"
+import cuda_util
 import numpy as np
 from keras.callbacks import EarlyStopping, ReduceLROnPlateau, ModelCheckpoint
 from keras.engine import Model

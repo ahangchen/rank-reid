@@ -3,8 +3,7 @@ import os
 from keras import Input
 from keras.layers import Flatten, Lambda, Dense
 
-os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"  # see issue #152
-os.environ["CUDA_VISIBLE_DEVICES"] = "1"
+import cuda_util
 import numpy as np
 from keras.callbacks import EarlyStopping, ReduceLROnPlateau
 from keras.engine import Model

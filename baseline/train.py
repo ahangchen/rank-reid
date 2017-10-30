@@ -6,8 +6,7 @@ from random import shuffle
 import numpy as np
 from keras.callbacks import EarlyStopping, ReduceLROnPlateau
 
-os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"  # see issue #152
-os.environ["CUDA_VISIBLE_DEVICES"] = "1"
+import cuda_util
 import tensorflow as tf
 
 from keras.applications.resnet50 import ResNet50
@@ -98,7 +97,7 @@ def softmax_model_pretrain(train_list, train_dir, class_count, target_model_path
 
     img_cnt = len(labels)
     # pretrain
-    batch_size =16
+    batch_size = 16
     train_datagen = ImageDataGenerator(
         shear_range=0.2,
         width_shift_range=0.2,  # 0.
@@ -120,7 +119,7 @@ def softmax_model_pretrain(train_list, train_dir, class_count, target_model_path
     net.fit_generator(
         train_datagen.flow(images, labels, batch_size=batch_size),
         steps_per_epoch=len(images) / batch_size + 1, epochs=40,
-        )
+    )
     net.save(target_model_path)
 
 

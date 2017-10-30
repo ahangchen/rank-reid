@@ -3,9 +3,7 @@ from __future__ import division, print_function, absolute_import
 import os
 
 import numpy as np
-
-# os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"  # see issue #152
-# os.environ["CUDA_VISIBLE_DEVICES"] = "1"
+import cuda_util
 import tensorflow as tf
 
 from keras.preprocessing import image
