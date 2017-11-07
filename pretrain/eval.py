@@ -1,5 +1,6 @@
 # coding=utf-8
 import os
+import cuda_util
 import numpy as np
 
 from keras import Input
