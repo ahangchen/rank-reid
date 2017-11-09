@@ -174,6 +174,10 @@ def pair_pretrain_on_dataset(source):
         train_list = project_path + '/dataset/market_train.list'
         train_dir = '/home/cwh/coding/Market-1501/train'
         class_count = 751
+    elif source == 'markets1':
+        train_list = project_path + '/dataset/markets1_train.list'
+        train_dir = '/home/cwh/coding/markets1'
+        class_count = 751
     elif source == 'grid':
         train_list = project_path + '/dataset/grid_train.list'
         train_dir = '/home/cwh/coding/grid_label'

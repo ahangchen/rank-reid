@@ -10,6 +10,8 @@ def get_source_target_info(source, target):
     target_dataset_path = ''
     if target == 'market':
         target_dataset_path = '/home/cwh/coding/Market-1501'
+    elif target == 'markets1':
+        target_dataset_path = '/home/cwh/coding/markets1'
     elif 'grid' in target:
         target_dataset_path = '/home/cwh/coding/grid_train_probe_gallery' + target.replace('grid-cv', '/cross')
     return source_model_path, target_dataset_path
@@ -46,8 +48,10 @@ def rank_predict(rank_model_path, target, transfer_train_rank_pids_path, transfe
 
 
 def predict_eval(target, predict_path):
-    if 'market' in target:
+    if target == 'market' or target == 'market-r':
         market_result_eval(predict_path)
+    elif target == 'markets1' or target == 'markets1-r':
+        market_result_eval(predict_path, TEST='/home/cwh/coding/markets1/test', QUERY='/home/cwh/coding/markets1/probe')
     elif 'grid' in target:
         grid_result_eval(predict_path)
 

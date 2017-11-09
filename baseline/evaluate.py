@@ -21,7 +21,7 @@ TEST = os.path.join(DATASET, 'bounding_box_test')
 TEST_NUM = 17661
 QUERY = os.path.join(DATASET, 'query')
 QUERY_NUM = 2228
-'''
+
 
 DATASET = project_path + '/dataset/Market'
 TEST = os.path.join(DATASET, 'test')
@@ -31,7 +31,7 @@ TRAIN_NUM = 12936
 QUERY = os.path.join(DATASET, 'probe')
 QUERY_NUM = 3368
 
-'''
+
 DATASET = project_path + '/dataset/CUHK03'
 TEST = os.path.join(DATASET, 'bbox_test')
 TEST_NUM = 5332
@@ -125,6 +125,7 @@ def sort_similarity(query_f, test_f):
 def map_rank_eval(query_info, test_info, result_argsort):
     # about 10% lower than matlab result
     # for evaluate rank1 and map
+    QUERY_NUM = len(query_info)
     match = []
     junk = []
 
@@ -141,7 +142,7 @@ def map_rank_eval(query_info, test_info, result_argsort):
 
     rank_1 = 0.0
     mAP = 0.0
-    test_num = min(TEST_NUM, len(result_argsort[0]))
+    test_num = len(result_argsort[0])
     for idx in range(len(query_info)):
         if idx % 100 == 0:
             print('evaluate img %d' % idx)
@@ -186,6 +187,7 @@ def map_rank_quick_eval(query_info, test_info, result_argsort):
     # for evaluate rank1 and map
     match = []
     junk = []
+    QUERY_NUM = len(query_info)
 
     for q_index, (qp, qc) in enumerate(query_info):
         tmp_match = []
@@ -200,6 +202,10 @@ def map_rank_quick_eval(query_info, test_info, result_argsort):
                 tmp_match.append(t_index)
             elif tp == qp or tp == -1:
                 tmp_junk.append(t_index)
+            # if tp == qp:
+            #     tmp_match.append(t_index)
+            # elif tp == -1:
+            #     tmp_junk.append(t_index)
         match.append(tmp_match)
         junk.append(tmp_junk)
 
@@ -277,7 +283,7 @@ def test_predict(net, probe_path, gallery_path, pid_path, score_path):
     # map_rank_eval(query_info, test_info, result_argsort)
 
 
-def market_result_eval(predict_path, log_path='market_eval_0.log'):
+def market_result_eval(predict_path, log_path='market_eval_0.log', TEST = '/home/cwh/coding/Market-1501/test', QUERY = '/home/cwh/coding/Market-1501/probe'):
     res = np.genfromtxt(predict_path, delimiter=' ')
     print('predict info get, extract gallery info start')
     test_info = extract_info(TEST)
@@ -335,6 +341,6 @@ if __name__ == '__main__':
     # market_result_eval('/home/cwh/coding/TrackViz/data/cuhk_market-r-test/cross_filter_pid.log')
 
     # market_result_eval('/home/cwh/coding/TrackViz/data/market_market-test/renew_pid.log')
-    market_result_eval('/home/cwh/coding/TrackViz/data/market_market-test/cross_filter_pid.log')
+    market_result_eval('/home/cwh/coding/TrackViz/data/grid_market-test/renew_pid.log')
     # market_result_eval('/home/cwh/coding/TrackViz/data/market_market-r-test/renew_pid.log')
     # market_result_eval('/home/cwh/coding/TrackViz/data/market_market-r-test/cross_filter_pid.log')
