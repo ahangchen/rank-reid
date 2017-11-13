@@ -341,6 +341,6 @@ if __name__ == '__main__':
     # market_result_eval('/home/cwh/coding/TrackViz/data/cuhk_market-r-test/cross_filter_pid.log')
 
     # market_result_eval('/home/cwh/coding/TrackViz/data/market_market-test/renew_pid.log')
-    market_result_eval('/home/cwh/coding/TrackViz/data/grid_market-test/renew_pid.log')
+    market_result_eval('/home/cwh/coding/TrackViz/data/market_market-test/cross_filter_pid.log')
     # market_result_eval('/home/cwh/coding/TrackViz/data/market_market-r-test/renew_pid.log')
     # market_result_eval('/home/cwh/coding/TrackViz/data/market_market-r-test/cross_filter_pid.log')

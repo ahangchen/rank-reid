@@ -157,7 +157,7 @@ def rank_transfer(train_generator, val_generator, source_model_path, target_mode
                                 cooldown=0, min_lr=0)
     model.fit_generator(train_generator,
                         steps_per_epoch=16500 / batch_size + 1,
-                        epochs=30,
+                        epochs=5,
                         validation_data=val_generator,
                         validation_steps=1800 / batch_size + 1,
                         callbacks=[early_stopping, auto_lr])
