@@ -11,7 +11,7 @@ from keras.applications.resnet50 import preprocess_input
 from keras.models import Model
 from keras.backend.tensorflow_backend import set_session
 from keras.models import load_model
-from util import write
+from utils import write
 
 project_path = '/home/cwh/coding/rank-reid'
 
