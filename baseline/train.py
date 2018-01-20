@@ -42,6 +42,42 @@ TRAIN = os.path.join(DATASET, 'bbox_train')
 '''
 
 
+def load_mix_data(LIST, TRAIN):
+    images, labels = [], []
+    with open(LIST, 'r') as f:
+        last_label = -1
+        label_cnt = -1
+        last_type = ''
+        for line in f:
+            line = line.strip()
+            img = line
+            lbl = line.split('_')[0]
+            cur_type = line.split('.')[-1]
+            if last_label != lbl or last_type != cur_type:
+                label_cnt += 1
+            last_label = lbl
+            last_type = cur_type
+            img = image.load_img(os.path.join(TRAIN, img), target_size=[224, 224])
+            img = image.img_to_array(img)
+            img = np.expand_dims(img, axis=0)
+            img = preprocess_input(img)
+
+            images.append(img[0])
+            labels.append(label_cnt)
+
+    img_cnt = len(labels)
+    shuffle_idxes = range(img_cnt)
+    shuffle(shuffle_idxes)
+    shuffle_imgs = list()
+    shuffle_labels = list()
+    for idx in shuffle_idxes:
+        shuffle_imgs.append(images[idx])
+        shuffle_labels.append(labels[idx])
+    images = np.array(shuffle_imgs)
+    labels = to_categorical(shuffle_labels)
+    return images, labels
+
+
 def load_data(LIST, TRAIN):
     images, labels = [], []
     with open(LIST, 'r') as f:
@@ -146,6 +182,10 @@ def softmax_pretrain_on_dataset(source):
         train_list = project_path + '/dataset/grid-cv/%d.list' % cv_idx
         train_dir = '/home/cwh/coding/underground_reid/cross%d/train' % cv_idx
         class_count = 125
+    elif 'mix' in source:
+        train_list = project_path + '/dataset/mix.list'
+        train_dir = '/home/cwh/coding/cuhk_grid_viper_mix'
+        class_count = 250 + 971 + 630
     else:
         train_list = 'unknown'
         train_dir = 'unknown'

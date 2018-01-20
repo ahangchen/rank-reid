@@ -11,7 +11,7 @@ from keras.applications.resnet50 import preprocess_input
 from keras.models import Model
 from keras.backend.tensorflow_backend import set_session
 from keras.models import load_model
-from utils import write
+from utils.file_helper import write
 
 project_path = '/home/cwh/coding/rank-reid'
 
@@ -240,7 +240,7 @@ def map_rank_quick_eval(query_info, test_info, result_argsort):
                 else:
                     break
             cnt = k + 1 - ig_cnt
-            hit = i
+            hit = i + 1
             tmp_recall = hit / len(YES)
             tmp_precision = hit / cnt
             ap = ap + (tmp_recall - recall) * ((precision + tmp_precision) / 2)

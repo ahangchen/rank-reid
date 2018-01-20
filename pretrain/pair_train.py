@@ -17,7 +17,36 @@ from numpy.random import randint, shuffle, choice
 from keras import backend as K
 
 
+def mix_data_prepare(data_list_path, train_dir_path):
+    class_img_labels = dict()
+    class_cnt = -1
+    last_label = -2
+    last_type = ''
+    with open(data_list_path, 'r') as f:
+        for line in f:
+            line = line.strip()
+            img = line
+            lbl = int(line.split('_')[0])
+            img_type = line.split('.')[-1]
+            if lbl != last_label or img_type != last_type:
+                class_cnt = class_cnt + 1
+                cur_list = list()
+                class_img_labels[str(class_cnt)] = cur_list
+            last_label = lbl
+            last_type = img_type
+
+            img = image.load_img(os.path.join(train_dir_path, img), target_size=[224, 224])
+            img = image.img_to_array(img)
+            img = np.expand_dims(img, axis=0)
+            img = preprocess_input(img)
+
+            class_img_labels[str(class_cnt)].append(img[0])
+    return class_img_labels
+
+
 def reid_data_prepare(data_list_path, train_dir_path):
+    if 'mix' in data_list_path:
+        return mix_data_prepare(data_list_path, train_dir_path)
     class_img_labels = dict()
     class_cnt = -1
     last_label = -2
@@ -195,6 +224,10 @@ def pair_pretrain_on_dataset(source):
         train_list = project_path + '/dataset/grid-cv/%d.list' % cv_idx
         train_dir = '/home/cwh/coding/grid_train_probe_gallery/cross%d/train' % cv_idx
         class_count = 125
+    elif 'mix' in source:
+        train_list = project_path + '/dataset/mix.list'
+        train_dir = '/home/cwh/coding/cuhk_grid_viper_mix'
+        class_count = 250 + 971 + 630
     else:
         train_list = 'unknown'
         train_dir = 'unknown'
@@ -213,9 +246,9 @@ if __name__ == '__main__':
     # pair_pretrain_on_dataset('market')
 
     # sources = ['grid', 'cuhk', 'viper']
-    sources = ['market']
+    sources = ['cuhk_grid_viper_mix']
     for source in sources:
-    #     softmax_pretrain_on_dataset(source)
+        softmax_pretrain_on_dataset(source)
         pair_pretrain_on_dataset(source)
     # sources = ['grid-cv-%d' % i for i in range(10)]
     # for source in sources:

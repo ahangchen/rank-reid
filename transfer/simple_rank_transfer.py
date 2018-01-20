@@ -155,12 +155,19 @@ def rank_transfer(train_generator, val_generator, source_model_path, target_mode
     early_stopping = EarlyStopping(monitor='val_loss', patience=1)
     auto_lr = ReduceLROnPlateau(monitor='val_loss', factor=0.1, patience=3, verbose=0, mode='auto', epsilon=0.0001,
                                 cooldown=0, min_lr=0)
+    if 'market-' in target_model_path:
+        train_data_cnt = 16500
+        val_data_cnt = 1800
+    else:
+        train_data_cnt = 1600
+        val_data_cnt = 180
     model.fit_generator(train_generator,
-                        steps_per_epoch=16500 / batch_size + 1,
-                        epochs=5,
-                        validation_data=val_generator,
-                        validation_steps=1800 / batch_size + 1,
-                        callbacks=[early_stopping, auto_lr])
+                            steps_per_epoch=train_data_cnt / batch_size + 1,
+                            epochs=5,
+                            validation_data=val_generator,
+                            validation_steps=val_data_cnt / batch_size + 1,
+                            callbacks=[early_stopping, auto_lr])
+
     # model.save('simple_rank_transfer.h5')
     model.save(target_model_path)
 
