@@ -219,6 +219,10 @@ def pair_pretrain_on_dataset(source):
         train_list = project_path + '/dataset/viper_train.list'
         train_dir = '/home/cwh/coding/viper'
         class_count = 630
+    elif source == 'duke':
+        train_list = project_path + '/dataset/duke_train.list'
+        train_dir = '/home/cwh/coding/DukeMTMC-reID/train'
+        class_count = 702
     elif 'grid-cv' in source:
         cv_idx = int(source.split('-')[-1])
         train_list = project_path + '/dataset/grid-cv/%d.list' % cv_idx
@@ -246,7 +250,8 @@ if __name__ == '__main__':
     # pair_pretrain_on_dataset('market')
 
     # sources = ['grid', 'cuhk', 'viper']
-    sources = ['cuhk_grid_viper_mix']
+    # sources = ['cuhk_grid_viper_mix']
+    sources = ['duke']
     for source in sources:
         softmax_pretrain_on_dataset(source)
         pair_pretrain_on_dataset(source)

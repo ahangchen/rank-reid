@@ -141,7 +141,7 @@ def rank_transfer_model(pair_model_path):
 def rank_transfer(train_generator, val_generator, source_model_path, target_model_path, batch_size=48):
     model = rank_transfer_model(source_model_path)
     plot_model(model, 'rank_model.png')
-    model.compile(optimizer=SGD(lr=0.001, momentum=0.9),
+    model.compile(optimizer='adam',
                   loss={
                       'sub_score': cross_entropy_loss
                       # 'sub_score': 'mse',
@@ -216,8 +216,8 @@ if __name__ == '__main__':
     # test_rank_eval('../transfer/simple_rank_transfer_st.h5', 'grid_cross0_simple_st_rank_transfer')
     # [0.2, 0.336, 0.392, 0.456, 0.632]
     # m = load_model('../pretrain/market_pair_pretrain.h5')
-    rank_transfer_2dataset('../pretrain/market_pair_pretrain.h5', '../dataset/market_train.list',
+    rank_transfer_2dataset('../pretrain/cuhk_grid_viper_mix_pair_pretrain.h5', '../dataset/market_train.list',
                            'rank_transfer_test.h5',
                            '/home/cwh/coding/Market-1501/train',
-                           '/home/cwh/coding/TrackViz/data/market_market-train/cross_filter_pid.log',
-                           '/home/cwh/coding/TrackViz/data/market_market-train/cross_filter_score.log')
+                           '/home/cwh/coding/TrackViz/data/cuhk_grid_viper_mix_market-train/cross_filter_pid.log',
+                           '/home/cwh/coding/TrackViz/data/cuhk_grid_viper_mix_market-train/cross_filter_score.log')

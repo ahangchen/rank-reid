@@ -12,6 +12,8 @@ def get_source_target_info(source, target):
         target_dataset_path = '/home/cwh/coding/Market-1501'
     elif target == 'markets1':
         target_dataset_path = '/home/cwh/coding/markets1'
+    elif target == 'duke':
+        target_dataset_path = '/home/cwh/coding/DukeMTMC-reID'
     elif 'grid' in target:
         target_dataset_path = '/home/cwh/coding/grid_train_probe_gallery' + target.replace('grid-cv', '/cross')
     return source_model_path, target_dataset_path
@@ -54,6 +56,8 @@ def predict_eval(target, predict_path):
         market_result_eval(predict_path, TEST='/home/cwh/coding/markets1/test', QUERY='/home/cwh/coding/markets1/probe')
     elif 'grid' in target:
         grid_result_eval(predict_path)
+    elif 'duke' in target:
+        market_result_eval(predict_path, log_path='duke_eval.log', TEST = '/home/cwh/coding/DukeMTMC-reID/test', QUERY = '/home/cwh/coding/DukeMTMC-reID/probe')
 
 
 if __name__ == '__main__':

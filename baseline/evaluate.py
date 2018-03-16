@@ -45,16 +45,16 @@ def extract_info(dir_path):
     for image_name in sorted(os.listdir(dir_path)):
         if '.txt' in image_name:
             continue
-        if 's' not in image_name:
-            # grid
-            arr = image_name.split('_')
-            person = int(arr[0])
-            camera = int(arr[1])
-        elif 's' in image_name:
+        if 's' in image_name or 'f' in image_name:
             #market
             arr = image_name.split('_')
             person = int(arr[0])
             camera = int(arr[1][1])
+        elif 's' not in image_name:
+            # grid
+            arr = image_name.split('_')
+            person = int(arr[0])
+            camera = int(arr[1])
         else:
             continue
         infos.append((person, camera))
@@ -71,16 +71,15 @@ def extract_feature(dir_path, net):
         #     break
         if '.txt' in image_name:
             continue
-        if 's' not in image_name:
+        if 'f' in image_name or 's' in image_name:
+            arr = image_name.split('_')
+            person = int(arr[0])
+            camera = int(arr[1][1])
+        elif 's' not in image_name:
             # grid
             arr = image_name.split('_')
             person = int(arr[0])
             camera = int(arr[1])
-        elif 's' in image_name:
-            #market
-            arr = image_name.split('_')
-            person = int(arr[0])
-            camera = int(arr[1][1])
         else:
             continue
         image_path = os.path.join(dir_path, image_name)
