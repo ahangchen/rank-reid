@@ -45,3 +45,16 @@
     - 当前最好结果是top1 18%
 #### Reference
 - [RankNet算法原理和实现](http://x-algo.cn/index.php/2016/07/31/ranknet-algorithm-principle-and-realization/)
+
+
+## Citation
+
+Please cite this paper in your publications if it helps your research:
+
+@article{,
+  title={Unsupervised Cross-dataset Person Re-identification by Transfer Learning of Spatial-Temporal Patterns},
+  author={Jianming, Lv and Weihang, Chen and Qing, Li and Can, Yang},
+  journal={CVPR},
+  year={2018}
+}
+       
