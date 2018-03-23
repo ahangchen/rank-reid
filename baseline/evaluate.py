@@ -3,41 +3,15 @@ from __future__ import division, print_function, absolute_import
 import os
 
 import numpy as np
-import cuda_util
 import tensorflow as tf
-
-from keras.preprocessing import image
 from keras.applications.resnet50 import preprocess_input
-from keras.models import Model
 from keras.backend.tensorflow_backend import set_session
-from keras.models import load_model
+from keras.models import Model
+from keras.preprocessing import image
+
 from utils.file_helper import write
 
 project_path = '/home/cwh/coding/rank-reid'
-
-'''
-DATASET = project_path + '../dataset/Duke'
-TEST = os.path.join(DATASET, 'bounding_box_test')
-TEST_NUM = 17661
-QUERY = os.path.join(DATASET, 'query')
-QUERY_NUM = 2228
-
-
-DATASET = project_path + '/dataset/Market'
-TEST = os.path.join(DATASET, 'test')
-TEST_NUM = 19732
-TRAIN = os.path.join(DATASET, 'train')
-TRAIN_NUM = 12936
-QUERY = os.path.join(DATASET, 'probe')
-QUERY_NUM = 3368
-
-
-DATASET = project_path + '/dataset/CUHK03'
-TEST = os.path.join(DATASET, 'bbox_test')
-TEST_NUM = 5332
-QUERY = os.path.join(DATASET, 'query')
-QUERY_NUM = 1400
-'''
 
 
 def extract_info(dir_path):
@@ -46,7 +20,7 @@ def extract_info(dir_path):
         if '.txt' in image_name:
             continue
         if 's' in image_name or 'f' in image_name:
-            #market
+            #market && duke
             arr = image_name.split('_')
             person = int(arr[0])
             camera = int(arr[1][1])
@@ -65,10 +39,7 @@ def extract_info(dir_path):
 def extract_feature(dir_path, net):
     features = []
     infos = []
-    num = 0
     for image_name in sorted(os.listdir(dir_path)):
-        # if num > 2:
-        #     break
         if '.txt' in image_name:
             continue
         if 'f' in image_name or 's' in image_name:
@@ -90,7 +61,6 @@ def extract_feature(dir_path, net):
         feature = net.predict(x)
         features.append(np.squeeze(feature))
         infos.append((person, camera))
-        # num += 1
 
     return features, infos
 
@@ -121,69 +91,8 @@ def sort_similarity(query_f, test_f):
     return result, result_argsort
 
 
-def map_rank_eval(query_info, test_info, result_argsort):
-    # about 10% lower than matlab result
-    # for evaluate rank1 and map
-    QUERY_NUM = len(query_info)
-    match = []
-    junk = []
-
-    for q_index, (qp, qc) in enumerate(query_info):
-        tmp_match = []
-        tmp_junk = []
-        for t_index, (tp, tc) in enumerate(test_info):
-            if tp == qp and qc != tc:
-                tmp_match.append(t_index)
-            elif tp == qp or tp == -1:
-                tmp_junk.append(t_index)
-        match.append(tmp_match)
-        junk.append(tmp_junk)
-
-    rank_1 = 0.0
-    mAP = 0.0
-    test_num = len(result_argsort[0])
-    for idx in range(len(query_info)):
-        if idx % 100 == 0:
-            print('evaluate img %d' % idx)
-        recall = 0.0
-        precision = 1.0
-        hit = 0.0
-        cnt = 0.0
-        ap = 0.0
-        YES = match[idx]
-        IGNORE = junk[idx]
-        rank_flag = True
-        for i in range(0, test_num):
-            k = result_argsort[idx][i]
-            if k in IGNORE:
-                continue
-            else:
-                cnt += 1
-                if k in YES:
-                    hit += 1
-                    if rank_flag:
-                        rank_1 += 1
-                tmp_recall = hit / len(YES)
-                tmp_precision = hit / cnt
-                ap = ap + (tmp_recall - recall) * ((precision + tmp_precision) / 2)
-                recall = tmp_recall
-                precision = tmp_precision
-                rank_flag = False
-            if hit == len(YES):
-                break
-        if hit < len(YES):
-            print('hit less than yes')
-        mAP += ap
-    rank1_acc = rank_1 / QUERY_NUM
-    mAP = mAP / QUERY_NUM
-    print('Rank 1:\t%f' % rank1_acc)
-    print('mAP:\t%f' % mAP)
-    return rank1_acc, mAP
-
-
 def map_rank_quick_eval(query_info, test_info, result_argsort):
-    # about 10% lower than matlab result
-    # for evaluate rank1 and map
+    # much more faster than hehefan's evaluation
     match = []
     junk = []
     QUERY_NUM = len(query_info)
@@ -201,10 +110,6 @@ def map_rank_quick_eval(query_info, test_info, result_argsort):
                 tmp_match.append(t_index)
             elif tp == qp or tp == -1:
                 tmp_junk.append(t_index)
-            # if tp == qp:
-            #     tmp_match.append(t_index)
-            # elif tp == -1:
-            #     tmp_junk.append(t_index)
         match.append(tmp_match)
         junk.append(tmp_junk)
 
@@ -276,10 +181,8 @@ def test_predict(net, probe_path, gallery_path, pid_path, score_path):
     for i in range(len(result)):
         result[i] = result[i][result_argsort[i]]
     result = np.array(result)
-    # ignore top1 because it's the origin image
     np.savetxt(pid_path, result_argsort, fmt='%d')
     np.savetxt(score_path, result, fmt='%.4f')
-    # map_rank_eval(query_info, test_info, result_argsort)
 
 
 def market_result_eval(predict_path, log_path='market_eval_0.log', TEST = '/home/cwh/coding/Market-1501/test', QUERY = '/home/cwh/coding/Market-1501/probe'):
@@ -323,23 +226,4 @@ def grid_result_eval(predict_path, log_path='grid_eval.log'):
     print(probe_acc)
 
 if __name__ == '__main__':
-    # file_result_eval('../pretrain/test_renew_pid.log')
-    # predict_eval()
-    # grid_result_eval('../pretrain/grid_cross0_transfer/test_renew_pid.log')
-    # grid_result_eval('/home/cwh/coding/rank-reid/vtep.log')
-    # [0.504, 0.776, 0.84, 0.896, 0.968]
-    # market_result_eval('/home/cwh/coding/TrackViz/data/market_market-test/cross_filter_pid.log')
-    # market_result_eval('/home/cwh/coding/TrackViz/data/viper_market-test/renew_pid.log')
-    # market_result_eval('/home/cwh/coding/TrackViz/data/viper_market-test/cross_filter_pid.log')
-    # market_result_eval('/home/cwh/coding/TrackViz/data/viper_market-r-test/renew_pid.log')
-    # market_result_eval('/home/cwh/coding/TrackViz/data/viper_market-r-test/cross_filter_pid.log')
-    #
-    # market_result_eval('/home/cwh/coding/TrackViz/data/cuhk_market-test/renew_pid.log')
-    # market_result_eval('/home/cwh/coding/TrackViz/data/cuhk_market-test/cross_filter_pid.log')
-    # market_result_eval('/home/cwh/coding/TrackViz/data/cuhk_market-r-test/renew_pid.log')
-    # market_result_eval('/home/cwh/coding/TrackViz/data/cuhk_market-r-test/cross_filter_pid.log')
-
-    # market_result_eval('/home/cwh/coding/TrackViz/data/market_market-test/renew_pid.log')
     market_result_eval('/home/cwh/coding/TrackViz/data/market_market-test/cross_filter_pid.log')
-    # market_result_eval('/home/cwh/coding/TrackViz/data/market_market-r-test/renew_pid.log')
-    # market_result_eval('/home/cwh/coding/TrackViz/data/market_market-r-test/cross_filter_pid.log')

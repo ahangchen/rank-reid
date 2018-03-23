@@ -1,20 +1,19 @@
 import os
 
-from keras.optimizers import SGD
-from baseline.train import softmax_pretrain_on_dataset
-
-import cuda_util
 import numpy as np
 from keras import Input
-from keras.callbacks import EarlyStopping, ReduceLROnPlateau, LearningRateScheduler
+from keras import backend as K
+from keras.applications.resnet50 import preprocess_input
+from keras.callbacks import EarlyStopping, ReduceLROnPlateau
 from keras.engine import Model
 from keras.layers import Lambda, Dense, Dropout, Flatten
 from keras.models import load_model
+from keras.optimizers import SGD
 from keras.preprocessing import image
 from keras.utils import plot_model, to_categorical
-from keras.applications.resnet50 import preprocess_input
 from numpy.random import randint, shuffle, choice
-from keras import backend as K
+
+from baseline.train import softmax_pretrain_on_dataset
 
 
 def mix_data_prepare(data_list_path, train_dir_path):
@@ -247,16 +246,13 @@ def pair_pretrain_on_dataset(source):
     )
 
 if __name__ == '__main__':
-    # pair_pretrain_on_dataset('market')
-
-    # sources = ['grid', 'cuhk', 'viper']
     # sources = ['cuhk_grid_viper_mix']
-    sources = ['duke']
+    sources = ['cuhk', 'viper', 'market','duke']
     for source in sources:
         softmax_pretrain_on_dataset(source)
         pair_pretrain_on_dataset(source)
-    # sources = ['grid-cv-%d' % i for i in range(10)]
-    # for source in sources:
-    #     softmax_pretrain_on_dataset(source)
-    #     pair_pretrain_on_dataset(source)
+    sources = ['grid-cv-%d' % i for i in range(10)]
+    for source in sources:
+        softmax_pretrain_on_dataset(source)
+        pair_pretrain_on_dataset(source)
 

@@ -1,19 +1,16 @@
 import os
 
-from keras import Input
-from keras.layers import Flatten, Lambda, Dense
-
-import cuda_util
 import numpy as np
+from keras import Input
+from keras import backend as K
+from keras.applications.resnet50 import preprocess_input
 from keras.callbacks import EarlyStopping, ReduceLROnPlateau
 from keras.engine import Model
-from keras.optimizers import SGD
-from keras.preprocessing import image
-from keras.applications.resnet50 import preprocess_input
+from keras.layers import Flatten, Lambda, Dense
 from keras.models import load_model
+from keras.preprocessing import image
 from keras.utils import plot_model
 from numpy.random import randint
-from keras import backend as K
 
 from pretrain.pair_train import eucl_dist
 
@@ -209,13 +206,6 @@ def rank_transfer_2dataset(source_pair_model_path, target_train_list, target_mod
 
 
 if __name__ == '__main__':
-    # rank_transfer_2grid('../pretrain/grid_cross0/train_renew_pid.log', '../pretrain/grid_cross0/train_renew_ac.log')
-    # grid_test_rank_eval('../transfer/simple_rank_transfer.h5', 'grid_cross0_simple_rank_transfer')
-    # [0.208, 0.336, 0.4, 0.464, 0.624]
-    # rank_transfer_2grid('', '../pretrain/grid_cross0/cross_filter_pid.log', '../pretrain/grid_cross0/cross_filter_score.log')
-    # test_rank_eval('../transfer/simple_rank_transfer_st.h5', 'grid_cross0_simple_st_rank_transfer')
-    # [0.2, 0.336, 0.392, 0.456, 0.632]
-    # m = load_model('../pretrain/market_pair_pretrain.h5')
     rank_transfer_2dataset('../pretrain/cuhk_grid_viper_mix_pair_pretrain.h5', '../dataset/market_train.list',
                            'rank_transfer_test.h5',
                            '/home/cwh/coding/Market-1501/train',
