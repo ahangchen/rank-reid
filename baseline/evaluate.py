@@ -11,8 +11,6 @@ from keras.preprocessing import image
 
 from utils.file_helper import write
 
-project_path = '/home/cwh/coding/rank-reid'
-
 
 def extract_info(dir_path):
     infos = []
@@ -20,7 +18,7 @@ def extract_info(dir_path):
         if '.txt' in image_name:
             continue
         if 's' in image_name or 'f' in image_name:
-            #market && duke
+            # market && duke
             arr = image_name.split('_')
             person = int(arr[0])
             camera = int(arr[1][1])
@@ -185,7 +183,8 @@ def test_predict(net, probe_path, gallery_path, pid_path, score_path):
     np.savetxt(score_path, result, fmt='%.4f')
 
 
-def market_result_eval(predict_path, log_path='market_eval_0.log', TEST = '/home/cwh/coding/Market-1501/test', QUERY = '/home/cwh/coding/Market-1501/probe'):
+def market_result_eval(predict_path, log_path='market_result_eval.log', TEST='Market-1501/test',
+                       QUERY='Market-1501/probe'):
     res = np.genfromtxt(predict_path, delimiter=' ')
     print('predict info get, extract gallery info start')
     test_info = extract_info(TEST)
@@ -207,23 +206,24 @@ def grid_result_eval(predict_path, log_path='grid_eval.log'):
                     for k in range(5):
                         probe_shoot[k] += 1
                 elif j < 5:
-                    for k in range(1,5):
+                    for k in range(1, 5):
                         probe_shoot[k] += 1
                 elif j < 10:
-                    for k in range(2,5):
+                    for k in range(2, 5):
                         probe_shoot[k] += 1
                 elif j < 20:
-                    for k in range(3,5):
+                    for k in range(3, 5):
                         probe_shoot[k] += 1
                 elif j < 50:
-                    for k in range(4,5):
+                    for k in range(4, 5):
                         probe_shoot[k] += 1
                 break
-    probe_acc = [shoot/len(pids4probes) for shoot in probe_shoot]
+    probe_acc = [shoot / len(pids4probes) for shoot in probe_shoot]
     write(log_path, predict_path + '\n')
     write(log_path, '%.2f\t%.2f\t%.2f\n' % (probe_acc[0], probe_acc[1], probe_acc[2]))
     print(predict_path)
     print(probe_acc)
 
+
 if __name__ == '__main__':
-    market_result_eval('/home/cwh/coding/TrackViz/data/market_market-test/cross_filter_pid.log')
+    market_result_eval('cross_filter_pid.log')

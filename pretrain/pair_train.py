@@ -196,40 +196,39 @@ def pair_tune(source_model_path, train_generator, val_generator, tune_dataset, b
 
 
 
-def pair_pretrain_on_dataset(source):
-    project_path = '/home/cwh/coding/rank-reid'
+def pair_pretrain_on_dataset(source, project_path='/home/cwh/coding/rank-reid', dataset_parent='/home/cwh/coding'):
     if source == 'market':
         train_list = project_path + '/dataset/market_train.list'
-        train_dir = '/home/cwh/coding/Market-1501/train'
+        train_dir = dataset_parent + '/Market-1501/train'
         class_count = 751
     elif source == 'markets1':
         train_list = project_path + '/dataset/markets1_train.list'
-        train_dir = '/home/cwh/coding/markets1'
+        train_dir = dataset_parent + '/markets1'
         class_count = 751
     elif source == 'grid':
         train_list = project_path + '/dataset/grid_train.list'
-        train_dir = '/home/cwh/coding/grid_label'
+        train_dir = dataset_parent + '/grid_label'
         class_count = 250
     elif source == 'cuhk':
         train_list = project_path + '/dataset/cuhk_train.list'
-        train_dir = '/home/cwh/coding/cuhk01'
+        train_dir = dataset_parent + '/cuhk01'
         class_count = 971
     elif source == 'viper':
         train_list = project_path + '/dataset/viper_train.list'
-        train_dir = '/home/cwh/coding/viper'
+        train_dir = dataset_parent + '/viper'
         class_count = 630
     elif source == 'duke':
         train_list = project_path + '/dataset/duke_train.list'
-        train_dir = '/home/cwh/coding/DukeMTMC-reID/train'
+        train_dir = dataset_parent + '/DukeMTMC-reID/train'
         class_count = 702
     elif 'grid-cv' in source:
         cv_idx = int(source.split('-')[-1])
         train_list = project_path + '/dataset/grid-cv/%d.list' % cv_idx
-        train_dir = '/home/cwh/coding/grid_train_probe_gallery/cross%d/train' % cv_idx
+        train_dir = dataset_parent + '/grid_train_probe_gallery/cross%d/train' % cv_idx
         class_count = 125
     elif 'mix' in source:
         train_list = project_path + '/dataset/mix.list'
-        train_dir = '/home/cwh/coding/cuhk_grid_viper_mix'
+        train_dir = dataset_parent + '/cuhk_grid_viper_mix'
         class_count = 250 + 971 + 630
     else:
         train_list = 'unknown'
@@ -249,10 +248,16 @@ if __name__ == '__main__':
     # sources = ['cuhk_grid_viper_mix']
     sources = ['cuhk', 'viper', 'market','duke']
     for source in sources:
-        softmax_pretrain_on_dataset(source)
+        softmax_pretrain_on_dataset(source,
+                                    project_path='/home/cwh/coding/rank-reid',
+                                    dataset_parent='/home/cwh/coding/')
         pair_pretrain_on_dataset(source)
     sources = ['grid-cv-%d' % i for i in range(10)]
     for source in sources:
-        softmax_pretrain_on_dataset(source)
-        pair_pretrain_on_dataset(source)
+        softmax_pretrain_on_dataset(source,
+                                    project_path='/home/cwh/coding/rank-reid',
+                                    dataset_parent='/home/cwh/coding')
+        pair_pretrain_on_dataset(source,
+                                 project_path='/home/cwh/coding/rank-reid',
+                                 dataset_parent='/home/cwh/coding')
 

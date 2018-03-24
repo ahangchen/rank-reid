@@ -51,9 +51,8 @@ def rank_predict(rank_model_path, target, transfer_train_rank_pids_path, transfe
 
 def predict_eval(target, predict_path):
     if target == 'market' or target == 'market-r':
-        market_result_eval(predict_path)
-    elif target == 'markets1' or target == 'markets1-r':
-        market_result_eval(predict_path, TEST='/home/cwh/coding/markets1/test', QUERY='/home/cwh/coding/markets1/probe')
+        market_result_eval(predict_path,
+                           TEST = '/home/cwh/coding/Market-1501/test', QUERY = '/home/cwh/coding/Market-1501/probe')
     elif 'grid' in target:
         grid_result_eval(predict_path)
     elif 'duke' in target:
