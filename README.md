@@ -1,10 +1,14 @@
 ## Rank Re-identification
 
 ### Introduction
-- Using RankNet to regress ranking probability
+- Implement [Siamese network](pretrain/pair_train.py) proposed by [Zhedong](https://github.com/layumi/2016_person_re-ID) in Keras
+- Using [RankNet](transfer/simple_rank_transfer.py) to regress ranking probability
 
 ### Model
+#### Siamese Network
+![](img/model_combined.png)
 
+#### RankNet
 ![](img/rank_model.png)
 
 - Base Network：ResNet50
@@ -15,7 +19,58 @@
 - NVIDIA TITANX 11G
 - Memory: >=16G
 
-### Code
+### Data prepare
+#### Download
+ - [CUHK01](http://www.ee.cuhk.edu.hk/~xgwang/CUHK_identification.html)
+ - [VIPeR](https://vision.soe.ucsc.edu/node/178)
+ - [Market-1501](http://www.liangzheng.org/Project/project_reid.html)
+ - [GRID](http://personal.ie.cuhk.edu.hk/~ccloy/downloads_qmul_underground_reid.html)
+
+#### Preprocess
+Take Market-1501 as an example:
+ - download
+ - rename training directory to 'train', rename probe directory to 'probe', renmae gallery directory to 'test'
+
+Your data directory will look like this:
+
+```bash
+Market-1501
+├── probe
+│   ├── 0003_c1s6_015971_00.jpg
+│   ├── 0003_c3s3_064744_00.jpg
+│   ├── 0003_c4s6_015641_00.jpg
+│   ├── 0003_c5s3_065187_00.jpg
+│   └── 0003_c6s3_088392_00.jpg
+├── test
+│   ├── 0003_c1s6_015971_02.jpg
+│   ├── 0003_c1s6_015996_02.jpg
+│   ├── 0003_c4s6_015716_03.jpg
+│   ├── 0003_c5s3_065187_01.jpg
+│   ├── 0003_c6s3_088392_04.jpg
+│   └── 0003_c6s3_088442_04.jpg
+└── train
+    ├── 0002_c1s1_000451_03.jpg
+    ├── 0002_c1s1_000551_01.jpg
+    ├── 0002_c1s1_000776_01.jpg
+    ├── 0002_c1s1_000801_01.jpg
+    ├── 0002_c1s1_069056_02.jpg
+    └── 0002_c6s1_073451_02.jpg
+
+```
+
+- replace all paths containing '/home/cwh/coding' to your data path in these file:
+  - [baseline/train.py](baseline/train.py)
+  - [pretrain/eval.py](pretrain/eval.py)
+  - [pretrain/pair_train.py](pretrain/pair_train.py)
+  - [transfer/simple_rank_transfer.py](transfer/simple_rank_transfer.py)
+
+
+### Execution
+- Train a Resnet-based softmax classifer: specify source dataset and run [baseline/train.py](baseline/train.py)
+- Train a siamese network: specify source dataset and run [pretrain/pair_train.py](pretrain/pair_train.py)
+- Train a RankNet: refer to [TFusion](https://github.com/ahangchen/TFusion)
+
+### Detail Instruction
 - baseline：ResNet52 base network
   - [evaluate.py](baseline/evaluate.py)
     - `extract_feature`: compute ranking result by base network and evaluate rank accuracy + mAP
@@ -38,6 +93,7 @@
   - [simple_rank_transfer.py](transfer/pair_transfer.py): learning to rank with three input images
     - triplet_generator_by_rank_list：image generator
     - rank_transfer_model：three input image, one ranking loss
+
 
 
 #### Reference
