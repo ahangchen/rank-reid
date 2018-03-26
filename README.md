@@ -1,60 +1,116 @@
 ## Rank Re-identification
 
-### 原理
-- 三张图两两之间的相似度大小决定了rank时备选图片的顺序
-- 可以根据相似度计算两对图的排序概率，两图相似度越高，排序概率越大
-- 通过回归两对图间的排序概率，对图像分类器做更好的训练
+### Introduction
+- Implement [Siamese network](pretrain/pair_train.py) proposed by [Zhedong](https://github.com/layumi/2016_person_re-ID) in Keras
+- Using [RankNet](transfer/simple_rank_transfer.py) to regress ranking probability
 
-### 模型
+### Model
+#### Siamese Network
+![](img/model_combined.png)
 
+#### RankNet
 ![](img/rank_model.png)
 
-- 基础网络：ResNet50
-- 输入：根据基础网络单模型计算相似度得到一个rank表，按表中的相似度选择一张待匹配图片A，备选图片B和C
-- 输出：根据特征之间的欧氏距离计算A和B的二分类loss（是否为同一人），A和C的二分类loss，使用ranknet公式计算AB排序高于AC的概率，回归根据rank表计算得到的实际排序概率
+- Base Network：ResNet50
+- Input：Given a ranking list, choose a probe image A, two gallery image B, C
+- Output：Compute the probability that rank AB > rank AC
 
-### 硬件
-- TITANX单卡（通过CUDA_VISIBLE_DEVICES指定使用哪块GPU）
+### Hardware
+- NVIDIA TITANX 11G
+- Memory: >=16G
 
-### 代码说明
-- baseline：ResNet50基础模型
+### Data prepare
+#### Download
+ - [CUHK01](http://www.ee.cuhk.edu.hk/~xgwang/CUHK_identification.html)
+ - [VIPeR](https://vision.soe.ucsc.edu/node/178)
+ - [Market-1501](http://www.liangzheng.org/Project/project_reid.html)
+ - [GRID](http://personal.ie.cuhk.edu.hk/~ccloy/downloads_qmul_underground_reid.html)
+
+#### Preprocess
+Take Market-1501 as an example:
+ - download
+ - rename training directory to 'train', rename probe directory to 'probe', renmae gallery directory to 'test'
+
+Your data directory will look like this:
+
+```bash
+Market-1501
+├── probe
+│   ├── 0003_c1s6_015971_00.jpg
+│   ├── 0003_c3s3_064744_00.jpg
+│   ├── 0003_c4s6_015641_00.jpg
+│   ├── 0003_c5s3_065187_00.jpg
+│   └── 0003_c6s3_088392_00.jpg
+├── test
+│   ├── 0003_c1s6_015971_02.jpg
+│   ├── 0003_c1s6_015996_02.jpg
+│   ├── 0003_c4s6_015716_03.jpg
+│   ├── 0003_c5s3_065187_01.jpg
+│   ├── 0003_c6s3_088392_04.jpg
+│   └── 0003_c6s3_088442_04.jpg
+└── train
+    ├── 0002_c1s1_000451_03.jpg
+    ├── 0002_c1s1_000551_01.jpg
+    ├── 0002_c1s1_000776_01.jpg
+    ├── 0002_c1s1_000801_01.jpg
+    ├── 0002_c1s1_069056_02.jpg
+    └── 0002_c6s1_073451_02.jpg
+
+```
+
+- replace all paths containing '/home/cwh/coding' to your data path in these file:
+  - [baseline/train.py](baseline/train.py)
+  - [pretrain/eval.py](pretrain/eval.py)
+  - [pretrain/pair_train.py](pretrain/pair_train.py)
+  - [transfer/simple_rank_transfer.py](transfer/simple_rank_transfer.py)
+
+
+### Execution
+- Train a Resnet-based softmax classifer: specify source dataset and run [baseline/train.py](baseline/train.py)
+- Train a siamese network: specify source dataset and run [pretrain/pair_train.py](pretrain/pair_train.py)
+- Train a RankNet: refer to [TFusion](https://github.com/ahangchen/TFusion)
+
+### Detail Instruction
+- baseline：ResNet52 base network
   - [evaluate.py](baseline/evaluate.py)
-    - extract_feature: 在测试集上计算特征
-    - similarity_matrix: 根据特征计算特征之间的余弦相似度（使用GPU矩阵运算进行加速）
-    - 在测试集上，调用test_predict计算rank表
-    - 在训练集上，调用train_predict计算rank表
-    - 使用map_rank_eval在Market1501上计算rank acc和map
-    - 使用grid_result_eval在GRID上计算rank acc
+    - `extract_feature`: compute ranking result by base network and evaluate rank accuracy + mAP
+    - `similarity_matrix`: Cosine similarity of CNN features(accelerated by GPU)
+    - On test set, compute ranking table with `test_predict`
+    - On training set，compute ranking table with `train_predict`
+    - Compute rank accuracy and mAP with `map_rank_quick_eval` on Market1501(can be extended to DukeMTMC4ReID)
+    - Compute rank accuracy with `grid_result_eval` on GRID
   - [train.py](baseline/train.py)
-    - 使用Market1501训练集数据预训练ResNet50基础网络
-- pair: 双图二分类模型预训练
-  - [pair_train.py](pair/pair_train.py)：双图预训练
-    - pair_generator: 数据生成器，根据标签选择正样本和负样本
-    - pair_model: 搭建二分类双输入模型
-  - [eval](pretrian/eval.py)：各种模型的测试都在这里
-    - 加载对应的模型
-    - 调用baseline/evaluate.py中与数据集对应的函数进行测试
+    - Use source dataset to pretrain ResNet52 base network
+- pair: pretrain siamese network
+  - [pair_train.py](pair/pair_train.py)：pretrain with two input images
+    - pair_generator: data generator, selecting positive and negative samples according to person id
+    - pair_model: build a Keras based Siamese network
+  - [eval](pretrian/eval.py)：evaluate on Siamese Network and ranknet
+    - load corresponding model
+    - call function in baseline/evaluate.py for test
 
-- transfer: 根据rank表选择样本对模型进行增量训练
-  - [pair_transfer.py](transfer/pair_transfer.py): 双图二分类增量训练
-    - pair_generator_by_rank_list： 数据生成器，选择top1中相似度大于中位数的作为正样本，选择相似度最小的百分之十的图片对作为负样本
-    - 当前最好结果是top1 19%
-  - [rank_transfer.py](transfer/pair_transfer.py): 三图ranknet增量训练
-    - triplet_generator_by_rank_list：与二分类相同的方法，选择三张（两对）图，同时计算排序概率作为回归标签
-    - rank_transfer_model：搭建ranknet加二分类模型，这里共有五个loss，两个二分类loss，两个相似度loss，一个排序概率loss
-    - 当前最好结果是top1 18%
+- transfer: incremental training with ranking table
+  - [simple_rank_transfer.py](transfer/pair_transfer.py): learning to rank with three input images
+    - triplet_generator_by_rank_list：image generator
+    - rank_transfer_model：three input image, one ranking loss
+
+
+
 #### Reference
-- [RankNet算法原理和实现](http://x-algo.cn/index.php/2016/07/31/ranknet-algorithm-principle-and-realization/)
+
+- [RankNet](https://icml.cc/2015/wp-content/uploads/2015/06/icml_ranking.pdf)
+
 
 
 ## Citation
 
 Please cite this paper in your publications if it helps your research:
 
-@article{,
+```
+@article{
   title={Unsupervised Cross-dataset Person Re-identification by Transfer Learning of Spatial-Temporal Patterns},
   author={Jianming, Lv and Weihang, Chen and Qing, Li and Can, Yang},
   journal={CVPR},
   year={2018}
 }
-       
+```

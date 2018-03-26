@@ -4,42 +4,18 @@ import os
 from random import shuffle
 
 import numpy as np
-from keras.callbacks import EarlyStopping, ReduceLROnPlateau
-
-import cuda_util
 import tensorflow as tf
-
 from keras.applications.resnet50 import ResNet50
+from keras.applications.resnet50 import preprocess_input
 from keras.backend.tensorflow_backend import set_session
-from keras.preprocessing.image import ImageDataGenerator
+from keras.initializers import RandomNormal
+from keras.layers import Dense, Flatten, Dropout
+from keras.layers import Input
+from keras.models import Model
 from keras.optimizers import SGD
 from keras.preprocessing import image
-from keras.applications.resnet50 import preprocess_input
+from keras.preprocessing.image import ImageDataGenerator
 from keras.utils.np_utils import to_categorical
-from keras.optimizers import SGD
-from keras.layers import Input
-from keras.layers import Dense, Flatten, Dropout
-from keras.initializers import RandomNormal
-from keras.models import Model
-from keras import backend as K
-from keras.models import load_model
-
-'''
-DATASET = '../dataset/Duke'
-LIST = os.path.join(DATASET, 'pretrain.list')
-TRAIN = os.path.join(DATASET, 'bounding_box_train')
-class_count = 702
-'''
-
-DATASET = '../dataset/Market'
-LIST = os.path.join(DATASET, 'pretrain.list')
-TRAIN = os.path.join(DATASET, 'bounding_box_train')
-class_count = 751
-'''
-DATASET = '../dataset/CUHK03'
-LIST = os.path.join(DATASET, 'pretrain.list')
-TRAIN = os.path.join(DATASET, 'bbox_train')
-'''
 
 
 def load_mix_data(LIST, TRAIN):
@@ -131,7 +107,6 @@ def softmax_model_pretrain(train_list, train_dir, class_count, target_model_path
     for layer in net.layers:
         layer.trainable = True
 
-    img_cnt = len(labels)
     # pretrain
     batch_size = 16
     train_datagen = ImageDataGenerator(
@@ -139,19 +114,7 @@ def softmax_model_pretrain(train_list, train_dir, class_count, target_model_path
         width_shift_range=0.2,  # 0.
         height_shift_range=0.2)
 
-    val_datagen = ImageDataGenerator()
-
     net.compile(optimizer=SGD(lr=0.001, momentum=0.9), loss='categorical_crossentropy', metrics=['accuracy'])
-    # net.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
-    early_stopping = EarlyStopping(monitor='val_loss', patience=3)
-    # auto_lr = ReduceLROnPlateau(monitor='val_loss', factor=0.1, patience=3, verbose=0, mode='auto', epsilon=0.0001,
-    #                             cooldown=0, min_lr=0)
-    # net.fit_generator(
-    #     train_datagen.flow(images[: int(0.9 * img_cnt)], labels[: int(0.9 * img_cnt)], batch_size=batch_size),
-    #     steps_per_epoch=len(images) / batch_size + 1, epochs=40,
-    #     validation_data=val_datagen.flow(images[int(0.9 * img_cnt):], labels[int(0.9 * img_cnt):],
-    #                                      batch_size=batch_size),
-    #     validation_steps=img_cnt / 10 / batch_size + 1)
     net.fit_generator(
         train_datagen.flow(images, labels, batch_size=batch_size),
         steps_per_epoch=len(images) / batch_size + 1, epochs=40,
@@ -159,36 +122,35 @@ def softmax_model_pretrain(train_list, train_dir, class_count, target_model_path
     net.save(target_model_path)
 
 
-def softmax_pretrain_on_dataset(source):
-    project_path = '/home/cwh/coding/rank-reid'
+def softmax_pretrain_on_dataset(source, project_path='/home/cwh/coding/rank-reid', dataset_parent='/home/cwh/coding'):
     if source == 'market':
         train_list = project_path + '/dataset/market_train.list'
-        train_dir = '/home/cwh/coding/Market-1501/train'
+        train_dir = dataset_parent + '/Market-1501/train'
         class_count = 751
     elif source == 'grid':
         train_list = project_path + '/dataset/grid_train.list'
-        train_dir = '/home/cwh/coding/grid_label'
+        train_dir = dataset_parent + '/grid_label'
         class_count = 250
     elif source == 'cuhk':
         train_list = project_path + '/dataset/cuhk_train.list'
-        train_dir = '/home/cwh/coding/cuhk01'
+        train_dir = dataset_parent + '/cuhk01'
         class_count = 971
     elif source == 'viper':
         train_list = project_path + '/dataset/viper_train.list'
-        train_dir = '/home/cwh/coding/viper'
+        train_dir = dataset_parent + '/viper'
         class_count = 630
     elif source == 'duke':
         train_list = project_path + '/dataset/duke_train.list'
-        train_dir = '/home/cwh/coding/DukeMTMC-reID/train'
+        train_dir = dataset_parent + '/DukeMTMC-reID/train'
         class_count = 702
     elif 'grid-cv' in source:
         cv_idx = int(source.split('-')[-1])
         train_list = project_path + '/dataset/grid-cv/%d.list' % cv_idx
-        train_dir = '/home/cwh/coding/underground_reid/cross%d/train' % cv_idx
+        train_dir = dataset_parent + '/underground_reid/cross%d/train' % cv_idx
         class_count = 125
     elif 'mix' in source:
         train_list = project_path + '/dataset/mix.list'
-        train_dir = '/home/cwh/coding/cuhk_grid_viper_mix'
+        train_dir = dataset_parent + '/cuhk_grid_viper_mix'
         class_count = 250 + 971 + 630
     else:
         train_list = 'unknown'

@@ -1,20 +1,19 @@
 import os
 
-from keras.optimizers import SGD
-from baseline.train import softmax_pretrain_on_dataset
-
-import cuda_util
 import numpy as np
 from keras import Input
-from keras.callbacks import EarlyStopping, ReduceLROnPlateau, LearningRateScheduler
+from keras import backend as K
+from keras.applications.resnet50 import preprocess_input
+from keras.callbacks import EarlyStopping, ReduceLROnPlateau
 from keras.engine import Model
 from keras.layers import Lambda, Dense, Dropout, Flatten
 from keras.models import load_model
+from keras.optimizers import SGD
 from keras.preprocessing import image
 from keras.utils import plot_model, to_categorical
-from keras.applications.resnet50 import preprocess_input
 from numpy.random import randint, shuffle, choice
-from keras import backend as K
+
+from baseline.train import softmax_pretrain_on_dataset
 
 
 def mix_data_prepare(data_list_path, train_dir_path):
@@ -68,26 +67,6 @@ def reid_data_prepare(data_list_path, train_dir_path):
 
             class_img_labels[str(class_cnt)].append(img[0])
 
-    return class_img_labels
-
-
-def grid_data_prepare(data_list_path, train_dir_path):
-    class_img_labels = dict()
-    cur_label = -2
-    with open(data_list_path, 'r') as f:
-        for line in f:
-            line = line.strip()
-            img = line
-            lbl = line.split('_')[0]
-            img = image.load_img(os.path.join(train_dir_path, img), target_size=[224, 224])
-            img = image.img_to_array(img)
-            img = np.expand_dims(img, axis=0)
-            img = preprocess_input(img)
-            if int(lbl) != cur_label:
-                cur_list = list()
-                class_img_labels[lbl] = cur_list
-                cur_label = int(lbl)
-            class_img_labels[lbl].append(img[0])
     return class_img_labels
 
 
@@ -197,40 +176,39 @@ def pair_tune(source_model_path, train_generator, val_generator, tune_dataset, b
 
 
 
-def pair_pretrain_on_dataset(source):
-    project_path = '/home/cwh/coding/rank-reid'
+def pair_pretrain_on_dataset(source, project_path='/home/cwh/coding/rank-reid', dataset_parent='/home/cwh/coding'):
     if source == 'market':
         train_list = project_path + '/dataset/market_train.list'
-        train_dir = '/home/cwh/coding/Market-1501/train'
+        train_dir = dataset_parent + '/Market-1501/train'
         class_count = 751
     elif source == 'markets1':
         train_list = project_path + '/dataset/markets1_train.list'
-        train_dir = '/home/cwh/coding/markets1'
+        train_dir = dataset_parent + '/markets1'
         class_count = 751
     elif source == 'grid':
         train_list = project_path + '/dataset/grid_train.list'
-        train_dir = '/home/cwh/coding/grid_label'
+        train_dir = dataset_parent + '/grid_label'
         class_count = 250
     elif source == 'cuhk':
         train_list = project_path + '/dataset/cuhk_train.list'
-        train_dir = '/home/cwh/coding/cuhk01'
+        train_dir = dataset_parent + '/cuhk01'
         class_count = 971
     elif source == 'viper':
         train_list = project_path + '/dataset/viper_train.list'
-        train_dir = '/home/cwh/coding/viper'
+        train_dir = dataset_parent + '/viper'
         class_count = 630
     elif source == 'duke':
         train_list = project_path + '/dataset/duke_train.list'
-        train_dir = '/home/cwh/coding/DukeMTMC-reID/train'
+        train_dir = dataset_parent + '/DukeMTMC-reID/train'
         class_count = 702
     elif 'grid-cv' in source:
         cv_idx = int(source.split('-')[-1])
         train_list = project_path + '/dataset/grid-cv/%d.list' % cv_idx
-        train_dir = '/home/cwh/coding/grid_train_probe_gallery/cross%d/train' % cv_idx
+        train_dir = dataset_parent + '/grid_train_probe_gallery/cross%d/train' % cv_idx
         class_count = 125
     elif 'mix' in source:
         train_list = project_path + '/dataset/mix.list'
-        train_dir = '/home/cwh/coding/cuhk_grid_viper_mix'
+        train_dir = dataset_parent + '/cuhk_grid_viper_mix'
         class_count = 250 + 971 + 630
     else:
         train_list = 'unknown'
@@ -247,16 +225,19 @@ def pair_pretrain_on_dataset(source):
     )
 
 if __name__ == '__main__':
-    # pair_pretrain_on_dataset('market')
-
-    # sources = ['grid', 'cuhk', 'viper']
     # sources = ['cuhk_grid_viper_mix']
-    sources = ['duke']
+    sources = ['cuhk', 'viper', 'market','duke']
     for source in sources:
-        softmax_pretrain_on_dataset(source)
+        softmax_pretrain_on_dataset(source,
+                                    project_path='/home/cwh/coding/rank-reid',
+                                    dataset_parent='/home/cwh/coding/')
         pair_pretrain_on_dataset(source)
-    # sources = ['grid-cv-%d' % i for i in range(10)]
-    # for source in sources:
-    #     softmax_pretrain_on_dataset(source)
-    #     pair_pretrain_on_dataset(source)
+    sources = ['grid-cv-%d' % i for i in range(10)]
+    for source in sources:
+        softmax_pretrain_on_dataset(source,
+                                    project_path='/home/cwh/coding/rank-reid',
+                                    dataset_parent='/home/cwh/coding')
+        pair_pretrain_on_dataset(source,
+                                 project_path='/home/cwh/coding/rank-reid',
+                                 dataset_parent='/home/cwh/coding')
 
