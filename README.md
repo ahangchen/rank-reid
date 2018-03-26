@@ -97,4 +97,20 @@ Market-1501
 
 
 #### Reference
+
 - [RankNet](https://icml.cc/2015/wp-content/uploads/2015/06/icml_ranking.pdf)
+
+
+
+## Citation
+
+Please cite this paper in your publications if it helps your research:
+
+```
+@article{
+  title={Unsupervised Cross-dataset Person Re-identification by Transfer Learning of Spatial-Temporal Patterns},
+  author={Jianming, Lv and Weihang, Chen and Qing, Li and Can, Yang},
+  journal={CVPR},
+  year={2018}
+}
+```
