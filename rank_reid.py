@@ -44,7 +44,7 @@ def rank_predict(rank_model_path, target, transfer_train_rank_pids_path, transfe
     target_train_path = target_dataset_path + '/train'
     target_probe_path = target_dataset_path + '/probe'
     target_gallery_path = target_dataset_path + '/test'
-    train_rank_predict(rank_model_path, target_train_path, transfer_train_rank_pids_path, transfer_train_rank_scores_path)
+    # train_rank_predict(rank_model_path, target_train_path, transfer_train_rank_pids_path, transfer_train_rank_scores_path)
     test_rank_predict(rank_model_path, target_probe_path, target_gallery_path, transfer_test_rank_pids_path, transfer_test_rank_scores_path)
     predict_eval(target, transfer_test_rank_pids_path)
 
@@ -60,6 +60,22 @@ def predict_eval(target, predict_path):
 
 
 if __name__ == '__main__':
+    # source = 'cuhk'
+    # target = 'market'
+    # fusion_train_rank_pids_path = '/home/cwh/coding/TrackViz/data/%s_%s-train/cross_filter_pid.log' % (source, target)
+    # fusion_train_rank_scores_path = '/home/cwh/coding/TrackViz/data/%s_%s-train/cross_filter_score.log' % (source, target)
+    # transfer_train_rank_pids_path = 'train_rank_pid.log'
+    # transfer_train_rank_scores_path = 'train_rank_score.log'
+    # transfer_test_rank_pids_path = 'test_rank_pid.log'
+    # transfer_test_rank_scores_path = 'test_rank_score.log'
+    # target_train_list ='dataset/market_train.list'
+    # rank_model_path = rank_transfer(source, target, target_train_list, fusion_train_rank_pids_path,
+    #                                fusion_train_rank_scores_path)
+    # # rank_model_path = '/home/cwh/coding/rank-reid/i_' + source + '_' + target + '-rank_transfer.h5'
+    # # rank_model_path = 'transfer/rank_transfer_test.h5'
+    # rank_predict(rank_model_path, target, transfer_train_rank_pids_path, transfer_train_rank_scores_path,
+    #              transfer_test_rank_pids_path, transfer_test_rank_scores_path)
+
     opt = sys.argv[1]
     if opt == '0':
         source = sys.argv[2]

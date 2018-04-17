@@ -1,18 +1,20 @@
 import os
-
+import utils.cuda_util
 import numpy as np
 from keras import Input
 from keras import backend as K
-from keras.applications.resnet50 import preprocess_input
+from keras.applications.resnet50 import preprocess_input, ResNet50
 from keras.callbacks import EarlyStopping, ReduceLROnPlateau
 from keras.engine import Model
-from keras.layers import Flatten, Lambda, Dense
+from keras.layers import Flatten, Lambda, Dense, Conv2D
 from keras.models import load_model
+from keras.optimizers import SGD
 from keras.preprocessing import image
 from keras.utils import plot_model
 from numpy.random import randint
 
 from pretrain.pair_train import eucl_dist
+from utils.file_helper import safe_remove
 
 
 def reid_img_prepare(LIST, TRAIN):
@@ -89,20 +91,25 @@ def triplet_generator_by_rank_list(train_images, batch_size, similar_persons, si
         left_images = train_images[left_img_ids]
         right_images1 = train_images[right_img_ids1]
         right_images2 = train_images[right_img_ids2]
-        sub_scores = np.subtract(right_img_scores1, right_img_scores2)
+        sub_scores = np.subtract(right_img_scores1, right_img_scores2) # * 10
         cur_epoch += 1
-        if cur_epoch % 2 == 0:
+        # print cur_epoch
+        if (cur_epoch/2) % 2 == 0:
+            # print sub_scores
+            # yield [left_images, right_images1, right_images2], [sub_scores, right_img_scores1, right_img_scores2]
             yield [left_images, right_images1, right_images2], [sub_scores]
         else:
+            # print -sub_scores
+            # yield [left_images, right_images2, right_images1], [-sub_scores, right_img_scores2, right_img_scores1]
             yield [left_images, right_images2, right_images1], [-sub_scores]
 
 
 def sub(inputs):
     x, y = inputs
-    return x - y
+    return (x - y) # *10
 
 
-def cross_entropy_loss(predict_score, real_score):
+def cross_entropy_loss(real_score, predict_score):
     predict_prob = 1 / (1 + K.exp(-predict_score))
     real_prob = 1 / (1 + K.exp(-real_score))
     cross_entropy = -real_prob * K.log(predict_prob) - (1 - real_prob) * K.log(1 - predict_prob)
@@ -113,6 +120,13 @@ def rank_transfer_model(pair_model_path):
     pair_model = load_model(pair_model_path)
     base_model = pair_model.layers[2]
     base_model = Model(inputs=base_model.get_input_at(0), outputs=[base_model.get_output_at(0)], name='resnet50')
+    # base_model = ResNet50(weights='imagenet', include_top=False, input_tensor=Input(shape=(224, 224, 3)))
+    # base_model = Model(inputs=[base_model.input], outputs=[base_model.output], name='resnet50')
+
+    for layer in base_model.layers[: len(base_model.layers)/3*2]:
+        layer.trainable = False
+    print 'to layer: %d' % (len(base_model.layers)/3*2)
+
     img0 = Input(shape=(224, 224, 3), name='img_0')
     img1 = Input(shape=(224, 224, 3), name='img_1')
     img2 = Input(shape=(224, 224, 3), name='img_2')
@@ -126,31 +140,38 @@ def rank_transfer_model(pair_model_path):
     sub_score = Lambda(sub, name='sub_score')([score1, score2])
 
     model = Model(inputs=[img0, img1, img2], outputs=[sub_score])
+    # model = Model(inputs=[img0, img1, img2], outputs=[sub_score])
     model.get_layer('score1').set_weights(pair_model.get_layer('bin_out').get_weights())
     model.get_layer('score2').set_weights(pair_model.get_layer('bin_out').get_weights())
     plot_model(model, to_file='rank_model.png')
 
-    for layer in base_model.layers:
-        layer.trainable = False
+
+    print(model.summary())
     return model
 
 
 def rank_transfer(train_generator, val_generator, source_model_path, target_model_path, batch_size=48):
     model = rank_transfer_model(source_model_path)
     plot_model(model, 'rank_model.png')
-    model.compile(optimizer='adam',
+    model.compile(
+        optimizer=SGD(lr=0.001, momentum=0.9), # 'adam',
+        # optimizer='adam',
                   loss={
-                      'sub_score': cross_entropy_loss
-                      # 'sub_score': 'mse',
+                      'sub_score': cross_entropy_loss,
+                      #'score1': 'binary_crossentropy',
+                      #'score2': 'binary_crossentropy'
+                      # 'sub_score': 'mse'
                   },
                   loss_weights={
-                      'sub_score': 1.
+                      'sub_score': 1,
+                      # 'score1': 0.5,
+                      # 'score2': 0.5
                   },
                   # metrics=['accuracy']
-                  )
+    )
 
-    early_stopping = EarlyStopping(monitor='val_loss', patience=1)
-    auto_lr = ReduceLROnPlateau(monitor='val_loss', factor=0.1, patience=3, verbose=0, mode='auto', epsilon=0.0001,
+    early_stopping = EarlyStopping(monitor='val_loss', patience=3)
+    auto_lr = ReduceLROnPlateau(monitor='val_loss', factor=0.1, patience=2, verbose=0, mode='auto', epsilon=0.0001,
                                 cooldown=0, min_lr=0)
     if 'market-' in target_model_path:
         train_data_cnt = 16500
@@ -163,8 +184,12 @@ def rank_transfer(train_generator, val_generator, source_model_path, target_mode
                             epochs=5,
                             validation_data=val_generator,
                             validation_steps=val_data_cnt / batch_size + 1,
-                            callbacks=[early_stopping, auto_lr])
-
+                            callbacks=[
+                                early_stopping,
+                               auto_lr
+                            ]
+                        )
+    safe_remove(target_model_path)
     # model.save('simple_rank_transfer.h5')
     model.save(target_model_path)
 
@@ -180,8 +205,8 @@ def rank_transfer_2market():
     similar_persons = np.genfromtxt('../pretrain/cross_filter_pid.log', delimiter=' ') - 1
     similar_matrix = np.genfromtxt('../pretrain/cross_filter_score.log', delimiter=' ')
     rank_transfer(
-        triplet_generator_by_rank_list(train_images, batch_size, similar_persons, similar_matrix, train=True),
-        triplet_generator_by_rank_list(train_images, batch_size, similar_persons, similar_matrix, train=False),
+        triplet_generator_by_rank_list(train_images[: len(train_images)*9/10], batch_size, similar_persons, similar_matrix, train=True),
+        triplet_generator_by_rank_list(train_images[len(train_images)*9/10:], batch_size, similar_persons, similar_matrix, train=False),
         '../pretrain/pair_pretrain.h5',
         'market2grid.h5',
         batch_size=batch_size
@@ -193,8 +218,25 @@ def rank_transfer_2dataset(source_pair_model_path, target_train_list, target_mod
     train_images = reid_img_prepare(target_train_list, target_train_path)
     batch_size = 16
     similar_persons = np.genfromtxt(rank_pid_path, delimiter=' ')
-    if 'cross' in rank_pid_path:
-        similar_persons = similar_persons - 1
+    # if 'cross' in rank_pid_path:
+    #     similar_persons = similar_persons - 1
+    similar_matrix = np.genfromtxt(rank_score_path, delimiter=' ')
+    rank_transfer(
+        triplet_generator_by_rank_list(train_images, batch_size, similar_persons, similar_matrix, train=True),
+        triplet_generator_by_rank_list(train_images, batch_size, similar_persons, similar_matrix, train=False),
+        source_pair_model_path,
+        target_model_path,
+        batch_size=batch_size
+    )
+
+
+def two_stage_rank_transfer_2dataset(source_pair_model_path, target_train_list, target_model_path, target_train_path,
+                           rank_pid_path, rank_score_path):
+    train_images = reid_img_prepare(target_train_list, target_train_path)
+    batch_size = 16
+    similar_persons = np.genfromtxt(rank_pid_path, delimiter=' ')
+    # if 'cross' in rank_pid_path:
+    #     similar_persons = similar_persons - 1
     similar_matrix = np.genfromtxt(rank_score_path, delimiter=' ')
     rank_transfer(
         triplet_generator_by_rank_list(train_images, batch_size, similar_persons, similar_matrix, train=True),
@@ -206,8 +248,14 @@ def rank_transfer_2dataset(source_pair_model_path, target_train_list, target_mod
 
 
 if __name__ == '__main__':
-    rank_transfer_2dataset('../pretrain/cuhk_grid_viper_mix_pair_pretrain.h5', '../dataset/market_train.list',
-                           'rank_transfer_test.h5',
-                           '/home/cwh/coding/Market-1501/train',
-                           '/home/cwh/coding/TrackViz/data/cuhk_grid_viper_mix_market-train/cross_filter_pid.log',
-                           '/home/cwh/coding/TrackViz/data/cuhk_grid_viper_mix_market-train/cross_filter_score.log')
+    pair_model = load_model('../pretrain/cuhk_pair_pretrain.h5')
+    base_model = pair_model.layers[2]
+    base_model = Model(inputs=base_model.get_input_at(0), outputs=[base_model.get_output_at(0)], name='resnet50')
+    print isinstance(base_model.layers[-20], Conv2D)
+
+    rank_transfer_2dataset('../pretrain/cuhk_pair_pretrain.h5', '../dataset/market_train.list',
+                          'rank_transfer_test.h5',
+                          '/home/cwh/coding/Market-1501/train',
+                          '/home/cwh/coding/TrackViz/data/cuhk_market-train/cross_filter_pid.log',
+                          '/home/cwh/coding/TrackViz/data/cuhk_market-train/cross_filter_score.log')
+

@@ -9,7 +9,7 @@ from keras.backend.tensorflow_backend import set_session
 from keras.models import Model
 from keras.preprocessing import image
 
-from utils.file_helper import write
+from utils.file_helper import write, safe_remove
 
 
 def extract_info(dir_path):
@@ -179,6 +179,8 @@ def test_predict(net, probe_path, gallery_path, pid_path, score_path):
     for i in range(len(result)):
         result[i] = result[i][result_argsort[i]]
     result = np.array(result)
+    safe_remove(pid_path)
+    safe_remove(score_path)
     np.savetxt(pid_path, result_argsort, fmt='%d')
     np.savetxt(score_path, result, fmt='%.4f')
 
