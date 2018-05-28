@@ -6,9 +6,10 @@ import numpy as np
 import tensorflow as tf
 from keras.applications.resnet50 import preprocess_input
 from keras.backend.tensorflow_backend import set_session
-from keras.models import Model
+from keras.models import Model, load_model
 from keras.preprocessing import image
 
+from transfer.sep_bn_mix_rank_transfer import cross_entropy_loss
 from utils.file_helper import write, safe_remove
 
 
@@ -68,8 +69,8 @@ def similarity_matrix(query_f, test_f):
     # use GPU to calculate the similarity matrix
     query_t = tf.placeholder(tf.float32, (None, None))
     test_t = tf.placeholder(tf.float32, (None, None))
-    query_t_norm = tf.nn.l2_normalize(query_t, dim=1)
-    test_t_norm = tf.nn.l2_normalize(test_t, dim=1)
+    query_t_norm = tf.nn.l2_normalize(query_t, axis=1)
+    test_t_norm = tf.nn.l2_normalize(test_t, axis=1)
     tensor = tf.matmul(query_t_norm, test_t_norm, transpose_a=False, transpose_b=True)
 
     config = tf.ConfigProto()
@@ -112,8 +113,9 @@ def map_rank_quick_eval(query_info, test_info, result_argsort):
         junk.append(tmp_junk)
 
     rank_1 = 0.0
+    rank_5 = 0.0
+    rank_10 = 0.0
     mAP = 0.0
-    rank1_list = list()
     for idx in range(len(query_info)):
         if idx % 100 == 0:
             print('evaluate img %d' % idx)
@@ -124,16 +126,16 @@ def map_rank_quick_eval(query_info, test_info, result_argsort):
         IGNORE = junk[idx]
         ig_cnt = 0
         for ig in IGNORE:
-            if ig < YES[0]:
+            if len(YES) > 0 and ig < YES[0]:
                 ig_cnt += 1
             else:
                 break
-        if ig_cnt >= YES[0]:
+        if len(YES) > 0 and ig_cnt >= YES[0]:
             rank_1 += 1
-            rank1_list.append(1)
-        else:
-            rank1_list.append(0)
-
+        if len(YES) > 0 and ig_cnt >= YES[0] - 4:
+            rank_5 += 1
+        if len(YES) > 0 and ig_cnt >= YES[0] - 9:
+            rank_10 += 1
         for i, k in enumerate(YES):
             ig_cnt = 0
             for ig in IGNORE:
@@ -151,11 +153,15 @@ def map_rank_quick_eval(query_info, test_info, result_argsort):
 
         mAP += ap
     rank1_acc = rank_1 / QUERY_NUM
+    rank5_acc = rank_5 / QUERY_NUM
+    rank10_acc = rank_10 /QUERY_NUM
     mAP = mAP / QUERY_NUM
     print('Rank 1:\t%f' % rank1_acc)
+    print('Rank 5:\t%f' % (rank_5 / QUERY_NUM))
+    print('Rank 10:\t%f' % (rank_10 / QUERY_NUM))
     print('mAP:\t%f' % mAP)
-    np.savetxt('rank_1.log', np.array(rank1_list), fmt='%d')
-    return rank1_acc, mAP
+    # np.savetxt('rank_1.log', np.array(rank1_list), fmt='%d')
+    return rank1_acc, rank5_acc, rank10_acc, mAP
 
 
 def train_predict(net, train_path, pid_path, score_path):
@@ -171,10 +177,42 @@ def train_predict(net, train_path, pid_path, score_path):
     return result
 
 
+
 def test_predict(net, probe_path, gallery_path, pid_path, score_path):
     net = Model(inputs=[net.input], outputs=[net.get_layer('avg_pool').output])
     test_f, test_info = extract_feature(gallery_path, net)
     query_f, query_info = extract_feature(probe_path, net)
+    result, result_argsort = sort_similarity(query_f, test_f)
+    for i in range(len(result)):
+        result[i] = result[i][result_argsort[i]]
+    result = np.array(result)
+    safe_remove(pid_path)
+    safe_remove(score_path)
+    np.savetxt(pid_path, result_argsort, fmt='%d')
+    np.savetxt(score_path, result, fmt='%.4f')
+
+
+def train_sepbn_predict(net_path, train_path, pid_path, score_path):
+    model = load_model(net_path, custom_objects={'cross_entropy_loss': cross_entropy_loss})
+    net = Model(inputs=[model.get_layer('resnet50').get_input_at(0)[1]],
+                  outputs=[model.get_layer('resnet50').get_output_at(0)[1]])
+    train_f, test_info = extract_feature(train_path, net)
+    result, result_argsort = sort_similarity(train_f, train_f)
+    for i in range(len(result)):
+        result[i] = result[i][result_argsort[i]]
+    result = np.array(result)
+    # ignore top1 because it's the origin image
+    np.savetxt(score_path, result[:, 1:], fmt='%.4f')
+    np.savetxt(pid_path, result_argsort[:, 1:], fmt='%d')
+    return result
+
+
+def test_sepbn_predict(net_path, probe_path, gallery_path, pid_path, score_path):
+    model = load_model(net_path, custom_objects={'cross_entropy_loss': cross_entropy_loss})
+    model = Model(inputs=[model.get_layer('resnet50').get_input_at(0)[1]],
+                  outputs=[model.get_layer('resnet50').get_output_at(0)[1]])
+    test_f, test_info = extract_feature(gallery_path, model)
+    query_f, query_info = extract_feature(probe_path, model)
     result, result_argsort = sort_similarity(query_f, test_f)
     for i in range(len(result)):
         result[i] = result[i][result_argsort[i]]
@@ -193,9 +231,9 @@ def market_result_eval(predict_path, log_path='market_result_eval.log', TEST='Ma
     print('extract probe info start')
     query_info = extract_info(QUERY)
     print('start evaluate map and rank acc')
-    rank1, mAP = map_rank_quick_eval(query_info, test_info, res)
+    rank1_acc, rank5_acc, rank10_acc, mAP = map_rank_quick_eval(query_info, test_info, res)
     write(log_path, predict_path + '\n')
-    write(log_path, '%f\t%f\n' % (rank1, mAP))
+    write(log_path, '& %f & %f & %f & %f\n' % (rank1_acc, rank5_acc, rank10_acc, mAP))
 
 
 def grid_result_eval(predict_path, log_path='grid_eval.log'):
@@ -223,9 +261,15 @@ def grid_result_eval(predict_path, log_path='grid_eval.log'):
     probe_acc = [shoot / len(pids4probes) for shoot in probe_shoot]
     write(log_path, predict_path + '\n')
     write(log_path, '%.2f\t%.2f\t%.2f\n' % (probe_acc[0], probe_acc[1], probe_acc[2]))
-    print(predict_path)
-    print(probe_acc)
+    return probe_acc[3]
+    # print(predict_path)
+    # print(probe_acc)
 
 
 if __name__ == '__main__':
-    market_result_eval('cross_filter_pid.log')
+    # market_result_eval('cross_filter_pid.log')
+    rank20_sum = 0.
+    for i in range(10):
+        rank20_sum += grid_result_eval('/home/cwh/coding/TrackViz/data/grid-cv-%d_grid-cv%d-test/cross_filter_pid.log' % (i, i))
+    rank20_sum /= 10.
+    print(rank20_sum)

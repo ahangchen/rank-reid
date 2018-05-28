@@ -1,6 +1,7 @@
 from __future__ import division, print_function, absolute_import
 
 import os
+import utils.cuda_util
 from random import shuffle
 
 import numpy as np

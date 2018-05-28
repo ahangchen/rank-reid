@@ -1,6 +1,7 @@
 import os
 
 import numpy as np
+import utils.cuda_util
 from keras import Input
 from keras import backend as K
 from keras.applications.resnet50 import preprocess_input
@@ -225,28 +226,26 @@ def pair_pretrain_on_dataset(source, project_path='/home/cwh/coding/rank-reid', 
     )
 
 if __name__ == '__main__':
-    sources = ['cuhk_grid_viper_mix']
-    sources = ['cuhk', 'viper', 'market','duke']
+    # sources = ['cuhk_grid_viper_mix']
+    # sources = ['cuhk', 'viper', 'market','duke']
+    sources = ['duke']
     for source in sources:
         softmax_pretrain_on_dataset(source,
                                     project_path='/home/cwh/coding/rank-reid',
                                     dataset_parent='/home/cwh/coding/')
         pair_pretrain_on_dataset(source)
-    sources = ['grid-cv-%d' % i for i in range(10)]
-    for source in sources:
-        softmax_pretrain_on_dataset(source,
-                                    project_path='/home/cwh/coding/rank-reid',
-                                    dataset_parent='/home/cwh/coding')
-        pair_pretrain_on_dataset(source,
-                                 project_path='/home/cwh/coding/rank-reid',
-                                 dataset_parent='/home/cwh/coding')
-
-    # sources = ['viper']
+    # sources = ['grid-cv-%d' % i for i in range(10)]
     # for source in sources:
-    #     # softmax_pretrain_on_dataset(source,
-    #     #                             project_path='/home/cwh/coding/rank-reid',
-    #     #                             dataset_parent='/home/cwh/coding/')
-    #     pair_pretrain_on_dataset(source)
+    #     softmax_pretrain_on_dataset(source,
+    #                                 project_path='/home/cwh/coding/rank-reid',
+    #                                 dataset_parent='/home/cwh/coding')
+    #     pair_pretrain_on_dataset(source,
+    #                              project_path='/home/cwh/coding/rank-reid',
+    #                              dataset_parent='/home/cwh/coding')
+
+    sources = ['grid']
+    for source in sources:
+        pair_pretrain_on_dataset(source)
     # sources = ['grid-cv-%d' % i for i in range(10)]
     # for source in sources:
     #     softmax_pretrain_on_dataset(source,

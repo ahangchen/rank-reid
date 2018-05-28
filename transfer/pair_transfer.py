@@ -1,11 +1,11 @@
 import os
-import utils.cuda_util
 
 import numpy as np
 from keras import Input
 from keras import backend as K
-from keras.applications.resnet50 import preprocess_input
-from keras.callbacks import EarlyStopping, ReduceLROnPlateau
+import tensorflow as tf
+from keras.applications.resnet50 import preprocess_input, ResNet50
+from keras.callbacks import EarlyStopping, ReduceLROnPlateau, ModelCheckpoint
 from keras.engine import Model
 from keras.layers import Lambda, Dense, Dropout, Flatten
 from keras.models import load_model
@@ -16,6 +16,11 @@ from numpy.random import randint, shuffle, choice
 
 from baseline.evaluate import market_result_eval
 from pretrain.eval import test_pair_predict
+from utils.file_helper import safe_remove
+
+os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"  # see issue #152
+os.environ["CUDA_VISIBLE_DEVICES"] = "2"
+
 
 
 def mix_data_prepare(data_list_path, train_dir_path):
@@ -102,7 +107,7 @@ def pair_generator(class_img_labels, batch_size, train=False):
         right_images = np.array(right_images)
         binary_label = (left_label == right_label).astype(int)
         cur_epoch += 1
-        yield [left_images, right_images], [ binary_label]
+        yield [left_images, right_images], [binary_label]
 
 
 def reid_img_prepare(LIST, TRAIN):
@@ -122,15 +127,31 @@ def reid_img_prepare(LIST, TRAIN):
     return images
 
 
+def gen_hard_neg_right_img_ids(left_similar_persons, left_similar_matrix, batch_size):
+    right_img_ids = list()
+    right_img_scores = list()
+    for i in range(batch_size):
+        hard_right_img_idxes = np.where(left_similar_matrix[i][70: 12500] > 0.5)[0] + 70
+        if len(hard_right_img_idxes) < batch_size:
+            right_img_idxes = np.concatenate(
+                hard_right_img_idxes, randint(70, 12500, batch_size - len(hard_right_img_idxes)))
+        else:
+            right_img_idxes = hard_right_img_idxes[randint(len(hard_right_img_idxes), size=batch_size)]
+        right_img_ids.append(left_similar_persons[i][right_img_idxes[i]])
+        right_img_scores.append(left_similar_matrix[i][right_img_idxes[i]])
+    right_img_ids = np.array(right_img_ids)
+    return right_img_ids, np.array(right_img_scores)/10
+
+
 def gen_neg_right_img_ids(left_similar_persons, left_similar_matrix, batch_size):
     right_img_ids = list()
-    right_img_idxes = randint(25, 12500, size=batch_size)
+    right_img_idxes = randint(100, 12500, size=batch_size)
     right_img_scores = list()
     for i in range(batch_size):
         right_img_ids.append(left_similar_persons[i][right_img_idxes[i]])
         right_img_scores.append(left_similar_matrix[i][right_img_idxes[i]])
     right_img_ids = np.array(right_img_ids)
-    return right_img_ids, np.array(right_img_scores)
+    return right_img_ids, np.array(right_img_scores)/10
 
 
 def gen_pos_right_img_ids(left_similar_persons, left_similar_matrix, batch_size):
@@ -162,23 +183,24 @@ def gen_right_img_infos(cur_epoch, similar_matrix, similar_persons, left_img_ids
     return right_img_ids, right_img_scores
 
 
-def pair_generator_by_rank_list(train_images, batch_size, similar_persons, similar_matrix):
+def pair_generator_by_rank_list(train_images, batch_size, similar_persons, similar_matrix, train=False):
     cur_epoch = 0
     img_cnt = len(similar_persons)
     while True:
-        left_img_ids = randint(img_cnt, size=batch_size)
-        right_img_ids1, right_img_scores1 = gen_right_img_infos(cur_epoch,
-                                                                similar_matrix, similar_persons,
-                                                                left_img_ids,
-                                                                img_cnt, batch_size)
+        if train:
+            left_img_ids = randint(img_cnt / 10 * 9, size=batch_size)
+        else:
+            left_img_ids = randint(img_cnt / 10 * 9, img_cnt, size=batch_size)
+        right_img_ids, right_img_scores = gen_right_img_infos(cur_epoch,
+                                                              similar_matrix, similar_persons,
+                                                              left_img_ids,
+                                                              img_cnt, batch_size)
 
         left_images = train_images[left_img_ids]
-        right_images1 = train_images[right_img_ids1]
+        right_images1 = train_images[right_img_ids]
+        print right_img_scores
         cur_epoch += 1
-        if (cur_epoch/2) % 2 == 0:
-            print right_img_scores1
-            yield [left_images, right_images1], [right_img_scores1]
-
+        yield [left_images, right_images1], [right_img_scores]
 
 
 def eucl_dist(inputs):
@@ -191,11 +213,19 @@ def cos_dist(inputs):
     x, y = inputs
     x = K.l2_normalize(x, axis=1)
     y = K.l2_normalize(y, axis=1)
-    return K.dot(x,K.transpose(y))
+    return K.dot(x, K.transpose(y))
 
 
 def dis_sigmoid(dis):
-    return K.expand_dims(2/(1+K.exp(dis)))
+    return K.expand_dims(2 / (1 + K.exp(dis)))
+
+
+def focal_loss_fixed(y_true, y_pred):
+    gamma = 2.
+    alpha = .25
+    pt_1 = tf.where(tf.equal(y_true, 1), y_pred, tf.ones_like(y_pred))
+    pt_0 = tf.where(tf.equal(y_true, 0), y_pred, tf.zeros_like(y_pred))
+    return -K.sum(alpha * K.pow(1. - pt_1, gamma) * K.log(pt_1))-K.sum((1-alpha) * K.pow( pt_0, gamma) * K.log(1. - pt_0))
 
 
 def pair_model(source_model_path, num_classes):
@@ -205,11 +235,11 @@ def pair_model(source_model_path, num_classes):
     base_model = Model(inputs=base_model.get_input_at(0), outputs=[base_model.get_output_at(0)], name='resnet50')
     img1 = Input(shape=(224, 224, 3), name='img_1')
     img2 = Input(shape=(224, 224, 3), name='img_2')
-    feature1 = Flatten()(base_model(img1))
-    feature2 = Flatten()(base_model(img2))
+    feature1 = Lambda(lambda  x: K.l2_normalize(x,axis=1))(Flatten()(base_model(img1)))
+    feature2 = Lambda(lambda  x: K.l2_normalize(x,axis=1))(Flatten()(base_model(img2)))
     dis = Lambda(eucl_dist, name='square')([feature1, feature2])
     # judge = Lambda(dis_sigmoid, name='bin_out')(dis)
-    judge = Dense(1, activation='sigmoid', name='bin_out')(Dropout(0.9)(dis))
+    judge = Dense(1, activation='sigmoid', name='bin_out')(Dropout(0.8)(dis))
 
     model = Model(inputs=[img1, img2], outputs=[judge])
     model.get_layer('bin_out').set_weights(pair_model.get_layer('bin_out').get_weights())
@@ -227,14 +257,17 @@ def common_lr(epoch):
     else:
         return 0.001
 
+
 def pair_tune(source_model_path, train_generator, val_generator, tune_dataset, batch_size=48, num_classes=751):
     model = pair_model(source_model_path, num_classes)
-    model.compile(optimizer=SGD(lr=0.001, momentum=0.9),
-                  loss={'bin_out': 'binary_crossentropy'},
-                  loss_weights={
-                      'bin_out': 1.
-                  },
-                  metrics=['accuracy'])
+    model.compile(
+        optimizer=SGD(lr=0.001, momentum=0.9),
+        # optimizer='adadelta',
+        loss={'bin_out': 'binary_crossentropy'},
+        loss_weights={
+            'bin_out': 1.
+        },
+        metrics=['accuracy'])
 
     early_stopping = EarlyStopping(monitor='val_loss', patience=4)
     auto_lr = ReduceLROnPlateau(monitor='val_loss', factor=0.1, patience=3, verbose=0, mode='auto', epsilon=0.0001,
@@ -242,15 +275,19 @@ def pair_tune(source_model_path, train_generator, val_generator, tune_dataset, b
     # save_model = ModelCheckpoint('resnet50-{epoch:02d}-{val_ctg_out_1_acc:.2f}.h5', period=2)
     model.fit_generator(train_generator,
                         steps_per_epoch=16500 / batch_size + 1,
-                        epochs=20,
+                        epochs=10,
                         validation_data=val_generator,
                         validation_steps=1800 / batch_size + 1,
-                        callbacks=[auto_lr, early_stopping])
-    model.save(tune_dataset + '_pair_pretrain.h5')
+                        callbacks=[auto_lr, early_stopping,
+                                   ModelCheckpoint(tune_dataset + '_pair_pretrain.h5', monitor='val_loss', verbose=0,
+                                                   save_best_only=True, save_weights_only=False,
+                                                   mode='auto', period=1)
+                                   ])
+    # model.save(tune_dataset + '_pair_pretrain.h5')
 
 
-
-def pair_pretrain_on_dataset(source, target, project_path='/home/cwh/coding/rank-reid', dataset_parent='/home/cwh/coding'):
+def pair_pretrain_on_dataset(source, target, project_path='/home/cwh/coding/rank-reid',
+                             dataset_parent='/home/cwh/coding'):
     if target == 'market':
         train_list = project_path + '/dataset/market_train.list'
         train_dir = dataset_parent + '/Market-1501/train'
@@ -288,32 +325,40 @@ def pair_pretrain_on_dataset(source, target, project_path='/home/cwh/coding/rank
         train_list = 'unknown'
         train_dir = 'unknown'
         class_count = -1
-    class_img_labels = reid_data_prepare(train_list, train_dir)
+
+    train_images = reid_img_prepare(train_list, train_dir)
+    # similar_persons = np.genfromtxt('/home/cwh/coding/rank-reid/data_clean/cross_filter_pid.log', delimiter=' ')
+    similar_persons = np.genfromtxt('/home/cwh/coding/TrackViz/data/cuhk_market-train/cross_filter_pid.log', delimiter=' ')
+    # if 'cross' in rank_pid_path:
+    #     similar_persons = similar_persons - 1
+    # similar_matrix = np.genfromtxt('/home/cwh/coding/rank-reid/data_clean/cross_filter_score.log', delimiter=' ')
+    # similar_matrix = np.genfromtxt('/home/cwh/coding/TrackViz/sorted_vision_score.txt', delimiter=' ')
+    similar_matrix = np.genfromtxt('/home/cwh/coding/TrackViz/data/cuhk_market-train/cross_filter_score.log', delimiter=' ')
     batch_size = 16
     pair_tune(
         '../pretrain/' + source + '_pair_pretrain.h5',
-        pair_generator(class_img_labels, batch_size=batch_size, train=True),
-        pair_generator(class_img_labels, batch_size=batch_size, train=False),
+        pair_generator_by_rank_list(train_images, batch_size, similar_persons, similar_matrix, train=True),
+        pair_generator_by_rank_list(train_images, batch_size, similar_persons, similar_matrix, train=False),
         target,
         batch_size=batch_size, num_classes=class_count
     )
-
 
 
 if __name__ == '__main__':
     # sources = ['cuhk_grid_viper_mix']
     sources = ['cuhk']
     target = 'market'
-    # for source in sources:
-    #     pair_pretrain_on_dataset(source, target)
-
+    pair_model('../pretrain/cuhk_pair_pretrain.h5', 751)
+    for source in sources:
+        pair_pretrain_on_dataset(source, target)
 
     transform_dir = '/home/cwh/coding/Market-1501'
+    safe_remove('pair_transfer_pid.log')
     test_pair_predict('market_pair_pretrain.h5',
-                          transform_dir + '/probe', transform_dir + '/test',
-                          'pair_transfer_pid.log', 'pair_transfer_score.log')
+                      transform_dir + '/probe', transform_dir + '/test',
+                      'pair_transfer_pid.log', 'pair_transfer_score.log')
     market_result_eval('pair_transfer_pid.log', TEST='/home/cwh/coding/Market-1501/test',
-                           QUERY='/home/cwh/coding/Market-1501/probe')
+                       QUERY='/home/cwh/coding/Market-1501/probe')
 
     # sources = ['grid-cv-%d' % i for i in range(10)]
     # for source in sources:
@@ -323,4 +368,3 @@ if __name__ == '__main__':
     #     pair_pretrain_on_dataset(source,
     #                              project_path='/home/cwh/coding/rank-reid',
     #                              dataset_parent='/home/cwh/coding')
-
