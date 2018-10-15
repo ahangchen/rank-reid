@@ -1,7 +1,9 @@
 # coding=utf-8
 import os
+import utils.cuda_util
 
 from keras import backend as K
+import tensorflow as tf
 from keras.engine import Model
 from keras.models import load_model
 from keras.preprocessing import image
@@ -11,6 +13,13 @@ from transfer.simple_rank_transfer import cross_entropy_loss
 
 
 #
+def focal_loss_fixed(y_true, y_pred):
+    gamma = 2.
+    alpha = .25
+    pt_1 = tf.where(tf.equal(y_true, 1), y_pred, tf.ones_like(y_pred))
+    pt_0 = tf.where(tf.equal(y_true, 0), y_pred, tf.zeros_like(y_pred))
+    return -K.sum(alpha * K.pow(1. - pt_1, gamma) * K.log(pt_1))-K.sum((1-alpha) * K.pow( pt_0, gamma) * K.log(1. - pt_0))
+
 
 
 def train_pair_predict(pair_model_path, target_train_path, pid_path, score_path):
@@ -22,7 +31,7 @@ def train_pair_predict(pair_model_path, target_train_path, pid_path, score_path)
 
 def test_pair_predict(pair_model_path, target_probe_path, target_gallery_path, pid_path, score_path):
     # todo
-    model = load_model(pair_model_path)
+    model = load_model(pair_model_path, custom_objects={'focal_loss_fixed': focal_loss_fixed})
     # model = ResNet50(weights='imagenet', include_top=False, input_tensor=Input(shape=(224, 224, 3)))
     model = Model(inputs=[model.get_layer('resnet50').get_input_at(0)],
                   outputs=[model.get_layer('resnet50').get_output_at(0)])
@@ -72,8 +81,8 @@ def train_rank_predict(rank_model_path, target_train_path, pid_path, score_path)
 
 def test_rank_predict(rank_model_path, target_probe_path, target_gallery_path, pid_path, score_path):
     model = load_model(rank_model_path, custom_objects={'cross_entropy_loss': cross_entropy_loss})
-    model = Model(inputs=[model.get_layer('resnet50').get_input_at(0)],
-                  outputs=[model.get_layer('resnet50').get_output_at(0)])
+    model = Model(inputs=[model.get_layer('resnet50').get_input_at(0)[0]],
+                  outputs=[model.get_layer('resnet50').get_output_at(0)[0]])
     test_predict(model, target_probe_path, target_gallery_path, pid_path, score_path)
 
 
@@ -94,11 +103,12 @@ def market_eval(source, transform_dir):
 
 
 if __name__ == '__main__':
-    market_eval('market', '/home/cwh/coding/Market-1501')
-    market_result_eval('market_market_pid.log',
-                       TEST='/home/cwh/coding/Market-1501/test',
-                       QUERY='/home/cwh/coding/Market-1501/probe')
-    grid_eval('market', '/home/cwh/coding/grid_train_probe_gallery/cross0')
-    grid_result_eval('/home/cwh/coding/TrackViz/data/market_grid-cv0-test/cross_filter_pid.log')
+    # market_eval('market', '/home/cwh/coding/Market-1501')
+    # market_result_eval('market_market_pid.log',
+    #                    TEST='/home/cwh/coding/Market-1501/test',
+    #                    QUERY='/home/cwh/coding/Market-1501/probe')
+    # grid_eval('market', '/home/cwh/coding/grid_train_probe_gallery/cross0')
+    # grid_result_eval('/home/cwh/coding/TrackViz/data/cuhk_grid-cv0-test/cross_filter_pid.log')
+    market_result_eval('/home/cwh/coding/TrackViz/data/cuhk_market-r-test/renew_pid.log', TEST='/home/cwh/coding/Market-1501/test', QUERY='/home/cwh/coding/Market-1501/probe')
 
 
