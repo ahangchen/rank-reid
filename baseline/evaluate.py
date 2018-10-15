@@ -154,7 +154,7 @@ def map_rank_quick_eval(query_info, test_info, result_argsort):
         mAP += ap
     rank1_acc = rank_1 / QUERY_NUM
     rank5_acc = rank_5 / QUERY_NUM
-    rank10_acc = rank_10 /QUERY_NUM
+    rank10_acc = rank_10 / QUERY_NUM
     mAP = mAP / QUERY_NUM
     print('Rank 1:\t%f' % rank1_acc)
     print('Rank 5:\t%f' % (rank_5 / QUERY_NUM))
@@ -177,7 +177,6 @@ def train_predict(net, train_path, pid_path, score_path):
     return result
 
 
-
 def test_predict(net, probe_path, gallery_path, pid_path, score_path):
     net = Model(inputs=[net.input], outputs=[net.get_layer('avg_pool').output])
     test_f, test_info = extract_feature(gallery_path, net)
@@ -195,7 +194,7 @@ def test_predict(net, probe_path, gallery_path, pid_path, score_path):
 def train_sepbn_predict(net_path, train_path, pid_path, score_path):
     model = load_model(net_path, custom_objects={'cross_entropy_loss': cross_entropy_loss})
     net = Model(inputs=[model.get_layer('resnet50').get_input_at(0)[1]],
-                  outputs=[model.get_layer('resnet50').get_output_at(0)[1]])
+                outputs=[model.get_layer('resnet50').get_output_at(0)[1]])
     train_f, test_info = extract_feature(train_path, net)
     result, result_argsort = sort_similarity(train_f, train_f)
     for i in range(len(result)):
@@ -266,10 +265,23 @@ def grid_result_eval(predict_path, log_path='grid_eval.log'):
     # print(probe_acc)
 
 
+
 if __name__ == '__main__':
-    # market_result_eval('cross_filter_pid.log')
+    source = 'duke'
+    target = 'market'
+    net = load_model(source + '_' + target + '.h5')
+    target_path = 'Market-1501'
+    probe_path = target_path + '/probe'
+    gallery_path = target_path + 'test'
+    pid_path = 'ret_pid.txt'
+    score_path = 'ret_score.txt'
+    test_predict(net, probe_path, gallery_path, pid_path, score_path)
+    market_result_eval(pid_path)
+
+    # if eval on grid, use grid_result_eval
     rank20_sum = 0.
     for i in range(10):
-        rank20_sum += grid_result_eval('/home/cwh/coding/TrackViz/data/grid-cv-%d_grid-cv%d-test/cross_filter_pid.log' % (i, i))
+        rank20_sum += grid_result_eval(
+            '/home/cwh/coding/TrackViz/data/grid-cv-%d_grid-cv%d-test/cross_filter_pid.log' % (i, i))
     rank20_sum /= 10.
     print(rank20_sum)
