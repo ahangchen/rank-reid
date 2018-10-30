@@ -1,5 +1,8 @@
 # coding=utf-8
 import os
+
+from keras.layers import BatchNormalization
+
 import utils.cuda_util
 
 from keras import backend as K
@@ -81,8 +84,12 @@ def train_rank_predict(rank_model_path, target_train_path, pid_path, score_path)
 
 def test_rank_predict(rank_model_path, target_probe_path, target_gallery_path, pid_path, score_path):
     model = load_model(rank_model_path, custom_objects={'cross_entropy_loss': cross_entropy_loss})
-    model = Model(inputs=[model.get_layer('resnet50').get_input_at(0)[0]],
-                  outputs=[model.get_layer('resnet50').get_output_at(0)[0]])
+    for layer in model.get_layer('resnet50').layers:
+        if isinstance(layer, BatchNormalization):
+            print(layer.get_weights())
+            break
+    model = Model(inputs=[model.get_layer('resnet50').get_input_at(0)],
+                  outputs=[model.get_layer('resnet50').get_output_at(0)])
     test_predict(model, target_probe_path, target_gallery_path, pid_path, score_path)
 
 
@@ -103,12 +110,11 @@ def market_eval(source, transform_dir):
 
 
 if __name__ == '__main__':
-    # market_eval('market', '/home/cwh/coding/Market-1501')
-    # market_result_eval('market_market_pid.log',
-    #                    TEST='/home/cwh/coding/Market-1501/test',
-    #                    QUERY='/home/cwh/coding/Market-1501/probe')
-    # grid_eval('market', '/home/cwh/coding/grid_train_probe_gallery/cross0')
-    # grid_result_eval('/home/cwh/coding/TrackViz/data/cuhk_grid-cv0-test/cross_filter_pid.log')
-    market_result_eval('/home/cwh/coding/TrackViz/data/cuhk_market-r-test/renew_pid.log', TEST='/home/cwh/coding/Market-1501/test', QUERY='/home/cwh/coding/Market-1501/probe')
-
-
+    target = 'market'
+    target_path = '/home/cwh/coding/Market-1501'
+    probe_path = target_path + '/probe'
+    gallery_path = target_path + '/test'
+    pid_path = 'ret_pid.txt'
+    score_path = 'ret_score.txt'
+    test_rank_predict('transfer/gt_rank_transfer.h5', probe_path, gallery_path, pid_path, score_path)
+    market_result_eval(pid_path, 'market_eval.txt', gallery_path, probe_path)

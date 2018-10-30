@@ -1,7 +1,10 @@
 from __future__ import division, print_function, absolute_import
 
 import os
-import utils.cuda_util
+
+from keras.callbacks import ModelCheckpoint
+
+import utils.cuda_util0
 from random import shuffle
 
 import numpy as np
@@ -10,13 +13,15 @@ from keras.applications.resnet50 import ResNet50
 from keras.applications.resnet50 import preprocess_input
 from keras.backend.tensorflow_backend import set_session
 from keras.initializers import RandomNormal
-from keras.layers import Dense, Flatten, Dropout
+from keras.layers import Dense, Flatten, Dropout, Conv2D, Reshape, Softmax
 from keras.layers import Input
 from keras.models import Model
-from keras.optimizers import SGD
+from keras.optimizers import SGD, Adagrad
 from keras.preprocessing import image
 from keras.preprocessing.image import ImageDataGenerator
 from keras.utils.np_utils import to_categorical
+
+from baseline.img_utils import get_random_eraser, crop_generator
 
 
 def load_mix_data(LIST, TRAIN):
@@ -110,15 +115,25 @@ def softmax_model_pretrain(train_list, train_dir, class_count, target_model_path
 
     # pretrain
     batch_size = 16
+    train_cnt = len(labels)
     train_datagen = ImageDataGenerator(
-        shear_range=0.2,
-        width_shift_range=0.2,  # 0.
-        height_shift_range=0.2)
+        shear_range=0.2, width_shift_range=0.2, height_shift_range=0.2,
+        horizontal_flip=0.5).flow(
+        images[:train_cnt//10*9], labels[:train_cnt//10*9], batch_size=batch_size)
 
+    # train_datagen = ImageDataGenerator().flow(
+    #     images[:train_cnt//10*9], labels[:train_cnt//10*9], batch_size=batch_size)
+    val_datagen = ImageDataGenerator(horizontal_flip=0.5).flow(images[train_cnt//10*9:], labels[train_cnt//10*9:], batch_size=batch_size)
+
+
+    save_best = ModelCheckpoint(target_model_path, monitor='val_acc', save_best_only=True)
     net.compile(optimizer=SGD(lr=0.001, momentum=0.9), loss='categorical_crossentropy', metrics=['accuracy'])
     net.fit_generator(
-        train_datagen.flow(images, labels, batch_size=batch_size),
-        steps_per_epoch=len(images) / batch_size + 1, epochs=40,
+        train_datagen,
+        steps_per_epoch=train_cnt/20 * 19 / batch_size + 1, epochs=40,
+        validation_data=val_datagen,
+        validation_steps=train_cnt/20/batch_size+1,
+        callbacks=[save_best]
     )
     net.save(target_model_path)
 

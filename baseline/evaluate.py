@@ -1,11 +1,13 @@
 from __future__ import division, print_function, absolute_import
 
 import os
+import utils.cuda_util0
 
 import numpy as np
 import tensorflow as tf
 from keras.applications.resnet50 import preprocess_input
 from keras.backend.tensorflow_backend import set_session
+from keras.layers import BatchNormalization
 from keras.models import Model, load_model
 from keras.preprocessing import image
 
@@ -167,17 +169,23 @@ def map_rank_quick_eval(query_info, test_info, result_argsort):
 def train_predict(net, train_path, pid_path, score_path):
     net = Model(inputs=[net.input], outputs=[net.get_layer('avg_pool').output])
     train_f, test_info = extract_feature(train_path, net)
+    np.savetxt(score_path.replace('renew_ac.log', 'feature.txt'), train_f, fmt='%.4f')
     result, result_argsort = sort_similarity(train_f, train_f)
     for i in range(len(result)):
         result[i] = result[i][result_argsort[i]]
     result = np.array(result)
     # ignore top1 because it's the origin image
+
+    np.savetxt(score_path.replace('.log', '.txt'), result, fmt='%.4f')
+    np.savetxt(pid_path.replace('.log', '.txt'), result_argsort, fmt='%d')
+
     np.savetxt(score_path, result[:, 1:], fmt='%.4f')
     np.savetxt(pid_path, result_argsort[:, 1:], fmt='%d')
     return result
 
 
 def test_predict(net, probe_path, gallery_path, pid_path, score_path):
+    # net = Model(inputs=[net.get_layer('resnet50').get_input_at(0)], outputs=[net.get_layer('resnet50').get_output_at(0)])
     net = Model(inputs=[net.input], outputs=[net.get_layer('avg_pool').output])
     test_f, test_info = extract_feature(gallery_path, net)
     query_f, query_info = extract_feature(probe_path, net)
@@ -267,21 +275,23 @@ def grid_result_eval(predict_path, log_path='grid_eval.log'):
 
 
 if __name__ == '__main__':
-    source = 'duke'
+    source = 'market'
     target = 'market'
-    net = load_model(source + '_' + target + '.h5')
-    target_path = 'Market-1501'
+    net = load_model('../pretrain/' + source + '_multi_pretrain.h5')
+    target_path = '/home/cwh/coding/Market-1501'
     probe_path = target_path + '/probe'
-    gallery_path = target_path + 'test'
-    pid_path = 'ret_pid.txt'
-    score_path = 'ret_score.txt'
-    test_predict(net, probe_path, gallery_path, pid_path, score_path)
-    market_result_eval(pid_path)
+    gallery_path = target_path + '/test'
+    train_path = target_path + '/train'
+    pid_path = 'ret_train_pid.txt'
+    score_path = 'ret_train_score.txt'
+    # train_predict(net, train_path, pid_path, score_path)
+    test_predict(net, probe_path, gallery_path,  pid_path, score_path)
+    market_result_eval(pid_path, 'market_eval.txt', gallery_path, probe_path)
 
     # if eval on grid, use grid_result_eval
-    rank20_sum = 0.
-    for i in range(10):
-        rank20_sum += grid_result_eval(
-            '/home/cwh/coding/TrackViz/data/grid-cv-%d_grid-cv%d-test/cross_filter_pid.log' % (i, i))
-    rank20_sum /= 10.
-    print(rank20_sum)
+    # rank20_sum = 0.
+    # for i in range(10):
+    #     rank20_sum += grid_result_eval(
+    #         '/home/cwh/coding/TrackViz/data/grid-cv-%d_grid-cv%d-test/cross_filter_pid.log' % (i, i))
+    # rank20_sum /= 10.
+    # print(rank20_sum)
