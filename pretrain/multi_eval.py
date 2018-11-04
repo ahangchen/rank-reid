@@ -1,3 +1,4 @@
+import utils.cuda_util0
 from keras import Model
 from keras.models import load_model
 import numpy as np

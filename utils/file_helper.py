@@ -1,4 +1,4 @@
-import os
+import os, shutil
 
 
 def write_line(path, content):
@@ -68,6 +68,13 @@ def safe_remove(path):
     else:
         return False
 
+
+def safe_rmdir(path):
+    if os.path.exists(path):
+        shutil.rmtree(path)
+        return True
+    else:
+        return False
 
 def safe_mkdir(path):
     if not os.path.exists(path):
