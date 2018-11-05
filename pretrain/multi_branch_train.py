@@ -154,7 +154,7 @@ def multi_branch_train(train_list, train_dir, class_count, camera_cnt, target_mo
 
     net.fit_generator(multi_generator(train_images, train_labels, batch_size),
                       steps_per_epoch=max_train_images_cnt / batch_size  + 1,
-                      epochs=20,
+                      epochs=25,
                       validation_data=next(multi_generator(val_images, val_labels, 90, train=False)),
                       # validation_data=multi_generator(val_images, val_labels, 90, train=False),
                       validation_steps=max_val_images_cnt / 90 + 1,
