@@ -143,23 +143,23 @@ def multi_branch_train(train_list, train_dir, class_count, camera_cnt, target_mo
     net.get_layer('resnet50').trainable = True
 
 
-    net.compile(optimizer=SGD(lr=3.5e-5, momentum=0.9, decay=0.01), loss=loss_dict,
+    net.compile(optimizer=SGD(lr=3.5e-4, momentum=0.9, decay=0.01), loss=loss_dict,
                 metrics=['accuracy'], loss_weights=loss_weights_dict)
     # net.compile(optimizer=Adam(lr=3.5e-4), loss=loss_dict,
     #             metrics=['accuracy'], loss_weights=loss_weights_dict)
     log_path = target_model_path.replace('.h5', '_logs')
     safe_rmdir(log_path)
     tb = TensorBoard(log_dir=log_path, histogram_freq=1, write_graph=False)
-    save_best = ModelCheckpoint(target_model_path, save_best_only=True)
+    # save_best = ModelCheckpoint(target_model_path, save_best_only=True)
 
     net.fit_generator(multi_generator(train_images, train_labels, batch_size),
                       steps_per_epoch=max_train_images_cnt / batch_size  + 1,
-                      epochs=25,
+                      epochs=20,
                       validation_data=next(multi_generator(val_images, val_labels, 90, train=False)),
                       # validation_data=multi_generator(val_images, val_labels, 90, train=False),
                       validation_steps=max_val_images_cnt / 90 + 1,
                       verbose=2,
-                      callbacks=[tb, save_best]
+                      # callbacks=[tb]
                       )
     net.save(target_model_path)
 
