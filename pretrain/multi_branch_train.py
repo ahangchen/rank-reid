@@ -1,6 +1,5 @@
 from __future__ import division, print_function, absolute_import
 
-import math
 import os
 import utils.cuda_util0
 from random import shuffle
@@ -8,17 +7,16 @@ from random import shuffle
 import numpy as np
 from keras.applications.resnet50 import ResNet50
 from keras.applications.resnet50 import preprocess_input
-from keras.callbacks import LearningRateScheduler, TensorBoard, ModelCheckpoint
-from keras.layers import Dense, Flatten, Dropout, BatchNormalization
+from keras.callbacks import TensorBoard
+from keras.layers import Dense, Flatten, Dropout, BatchNormalization, Activation
 from keras.layers import Input
 from keras.models import Model
-from keras.optimizers import SGD, Adam
+from keras.optimizers import Adam, SGD
 from keras.preprocessing import image
 from keras.preprocessing.image import ImageDataGenerator
-from keras.utils import plot_model
 from keras.utils.np_utils import to_categorical
 
-from utils.file_helper import safe_remove, safe_rmdir
+from utils.file_helper import safe_rmdir
 
 
 def load_data(LIST, TRAIN, camera_cnt, class_cnt):
@@ -92,10 +90,13 @@ def multi_branch_model(class_cnt, camera_cnt):
         img_inputs.append(Input(shape=(224, 224, 3), name='img_%d' % i))
         x = base_model(img_inputs[i])
         x = Dropout(0.5)(Flatten()(x))
-        sm_output = Dense(class_cnt, name='sm_out_%d' % i, activation='softmax')(x)
+        x = Dense(class_cnt)(x)
+        x = BatchNormalization()(x)
+        x = Activation('relu')(x)
+        sm_output = Activation('softmax', name='sm_out_%d' % i)(x)
         softmax_outputs.append(sm_output)
     net = Model(inputs=img_inputs, outputs=softmax_outputs)
-    plot_model(net, to_file='multi_branch.png')
+    # plot_model(net, to_file='multi_branch.png')
     return net
 
 
@@ -127,40 +128,49 @@ def multi_branch_train(train_list, train_dir, class_count, camera_cnt, target_mo
         loss_dict['sm_out_%d' % i] = 'categorical_crossentropy'
         loss_weights_dict['sm_out_%d' % i] = loss_weights[i]
     net = multi_branch_model(class_count, camera_cnt)
-    batch_size = 14
+    for i in range(3):
+        batch_size = 16
+        net.get_layer('resnet50').trainable = False
+        for layer in net.layers:
+            if isinstance(layer, BatchNormalization):
+                layer.trainable = True
+            if isinstance(layer, Dense):
+                layer.trainable = True
+        net.compile(optimizer=Adam(lr=0.002/(i+1)), loss=loss_dict,
+                    metrics=['accuracy'], loss_weights=loss_weights_dict)
+        net.fit_generator(multi_generator(train_images, train_labels, batch_size),
+                          steps_per_epoch=max_train_images_cnt / batch_size + 1,
+                          epochs=5,
+                          validation_data=multi_generator(val_images, val_labels, batch_size, train=False),
+                          validation_steps=max_val_images_cnt / batch_size + 1,
+                          verbose=2
+                          )
 
-    net.get_layer('resnet50').trainable = False
-    net.compile(optimizer=Adam(lr=0.001), loss=loss_dict,
-                metrics=['accuracy'], loss_weights=loss_weights_dict)
-
-    net.fit_generator(multi_generator(train_images, train_labels, batch_size),
-                      steps_per_epoch=max_train_images_cnt / batch_size + 1,
-                      epochs=5,
-                      validation_data=multi_generator(val_images, val_labels, batch_size, train=False),
-                      validation_steps=max_val_images_cnt / batch_size + 1,
-                      verbose=2
-                      )
-    net.get_layer('resnet50').trainable = True
-
-
-    net.compile(optimizer=SGD(lr=3.5e-4, momentum=0.9, decay=0.01), loss=loss_dict,
-                metrics=['accuracy'], loss_weights=loss_weights_dict)
-    # net.compile(optimizer=Adam(lr=3.5e-4), loss=loss_dict,
-    #             metrics=['accuracy'], loss_weights=loss_weights_dict)
-    log_path = target_model_path.replace('.h5', '_logs')
-    safe_rmdir(log_path)
-    tb = TensorBoard(log_dir=log_path, histogram_freq=1, write_graph=False)
-    # save_best = ModelCheckpoint(target_model_path, save_best_only=True)
-
-    net.fit_generator(multi_generator(train_images, train_labels, batch_size),
-                      steps_per_epoch=max_train_images_cnt / batch_size  + 1,
-                      epochs=25,
-                      validation_data=next(multi_generator(val_images, val_labels, 90, train=False)),
-                      # validation_data=multi_generator(val_images, val_labels, 90, train=False),
-                      validation_steps=max_val_images_cnt / 90 + 1,
-                      verbose=2,
-                      # callbacks=[tb]
-                      )
+        batch_size = 14
+        net.get_layer('resnet50').trainable = True
+        for layer in net.layers:
+            if isinstance(layer, BatchNormalization):
+                layer.trainable = False
+            if isinstance(layer, Dense):
+                layer.trainable = False
+        # if i >= 1:
+        #     for layer in net.get_layer('resnet50').layers:
+        #         layer.trainable = True
+        net.compile(optimizer=SGD(lr=2e-3/(i+1), momentum=0.9, decay=0.01), loss=loss_dict,
+                    metrics=['accuracy'], loss_weights=loss_weights_dict)
+        log_path = target_model_path.replace('.h5', '_logs')
+        safe_rmdir(log_path)
+        tb = TensorBoard(log_dir=log_path, histogram_freq=1, write_graph=False)
+        net.fit_generator(multi_generator(train_images, train_labels, batch_size),
+                          steps_per_epoch=max_train_images_cnt / batch_size  + 1,
+                          epochs=5,
+                          validation_data=next(multi_generator(val_images, val_labels, 90, train=False)),
+                          # validation_data=multi_generator(val_images, val_labels, 90, train=False),
+                          validation_steps=max_val_images_cnt / 90 + 1,
+                          verbose=2,
+                          callbacks=[tb]
+                          )
+        net.save(target_model_path.replace('.h5', '_%d.h5' % i))
     net.save(target_model_path)
 
 
