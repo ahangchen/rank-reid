@@ -136,7 +136,7 @@ def multi_branch_train(train_list, train_dir, class_count, camera_cnt, target_mo
                 layer.trainable = True
             if isinstance(layer, Dense):
                 layer.trainable = True
-        net.compile(optimizer=Adam(lr=0.002/(i+1)), loss=loss_dict,
+        net.compile(optimizer=Adam(lr=0.002), loss=loss_dict,
                     metrics=['accuracy'], loss_weights=loss_weights_dict)
         net.fit_generator(multi_generator(train_images, train_labels, batch_size),
                           steps_per_epoch=max_train_images_cnt / batch_size + 1,
@@ -158,7 +158,7 @@ def multi_branch_train(train_list, train_dir, class_count, camera_cnt, target_mo
             for layer in net.get_layer('resnet50').layers:
                 layer.trainable = True
             batch_size = 12
-        net.compile(optimizer=SGD(lr=2e-3/(i+1), momentum=0.9, decay=0.01), loss=loss_dict,
+        net.compile(optimizer=SGD(lr=2e-3, momentum=0.9, decay=0.01), loss=loss_dict,
                     metrics=['accuracy'], loss_weights=loss_weights_dict)
         log_path = target_model_path.replace('.h5', '_logs')
         safe_rmdir(log_path)
