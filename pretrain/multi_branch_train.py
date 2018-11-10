@@ -128,7 +128,7 @@ def multi_branch_train(train_list, train_dir, class_count, camera_cnt, target_mo
         loss_dict['sm_out_%d' % i] = 'categorical_crossentropy'
         loss_weights_dict['sm_out_%d' % i] = loss_weights[i]
     net = multi_branch_model(class_count, camera_cnt)
-    for i in range(3):
+    for i in range(10):
         batch_size = 16
         net.get_layer('resnet50').trainable = False
         for layer in net.layers:
@@ -148,14 +148,16 @@ def multi_branch_train(train_list, train_dir, class_count, camera_cnt, target_mo
 
         batch_size = 14
         net.get_layer('resnet50').trainable = True
+
         for layer in net.layers:
             if isinstance(layer, BatchNormalization):
                 layer.trainable = False
             if isinstance(layer, Dense):
                 layer.trainable = False
-        # if i >= 1:
-        #     for layer in net.get_layer('resnet50').layers:
-        #         layer.trainable = True
+        if i >= 3:
+            for layer in net.get_layer('resnet50').layers:
+                layer.trainable = True
+            batch_size = 12
         net.compile(optimizer=SGD(lr=2e-3/(i+1), momentum=0.9, decay=0.01), loss=loss_dict,
                     metrics=['accuracy'], loss_weights=loss_weights_dict)
         log_path = target_model_path.replace('.h5', '_logs')
