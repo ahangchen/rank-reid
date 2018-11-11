@@ -1,7 +1,7 @@
 from __future__ import division, print_function, absolute_import
 
 import os
-import utils.cuda_util0
+import utils.cuda_util
 from random import shuffle
 
 import numpy as np
@@ -158,7 +158,11 @@ def multi_branch_train(train_list, train_dir, class_count, camera_cnt, target_mo
             for layer in net.get_layer('resnet50').layers:
                 layer.trainable = True
             batch_size = 12
-        net.compile(optimizer=SGD(lr=2e-3, momentum=0.9, decay=0.01), loss=loss_dict,
+        if i > 5:
+            cnn_lr = 2e-3 / i
+        else:
+            cnn_lr = 2e-3
+        net.compile(optimizer=SGD(lr=cnn_lr, momentum=0.9, decay=0.01), loss=loss_dict,
                     metrics=['accuracy'], loss_weights=loss_weights_dict)
         log_path = target_model_path.replace('.h5', '_logs')
         safe_rmdir(log_path)
