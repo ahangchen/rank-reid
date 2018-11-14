@@ -4,7 +4,7 @@ import os
 
 from keras.callbacks import ModelCheckpoint
 
-import utils.cuda_util0
+import utils.cuda_util
 from random import shuffle
 
 import numpy as np

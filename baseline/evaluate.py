@@ -1,7 +1,7 @@
 from __future__ import division, print_function, absolute_import
 
 import os
-import utils.cuda_util0
+import utils.cuda_util_test
 
 import numpy as np
 import tensorflow as tf

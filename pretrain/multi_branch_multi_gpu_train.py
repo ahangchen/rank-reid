@@ -3,7 +3,7 @@ from __future__ import division, print_function, absolute_import
 import math
 import os
 import tensorflow as tf
-import utils.cuda_util0
+import utils.cuda_util_test
 from random import shuffle
 
 import numpy as np
