@@ -1,7 +1,7 @@
 from __future__ import division, print_function, absolute_import
 
 import os
-import utils.cuda_util_ti4
+import utils.cuda_util
 from random import shuffle
 
 import numpy as np
@@ -86,10 +86,11 @@ def multi_branch_model(class_cnt, camera_cnt):
         layer.trainable = False
     img_inputs = []
     softmax_outputs = []
+    dropout = Dropout(0.5)
     for i in range(camera_cnt):
         img_inputs.append(Input(shape=(224, 224, 3), name='img_%d' % i))
         x = base_model(img_inputs[i])
-        x = Dropout(0.5)(Flatten()(x))
+        x = dropout(Flatten()(x))
         x = Dense(class_cnt)(x)
         x = BatchNormalization()(x)
         x = Activation('relu')(x)
@@ -137,7 +138,7 @@ def multi_branch_train(train_list, train_dir, class_count, camera_cnt, target_mo
             if isinstance(layer, Dense):
                 layer.trainable = True
         net.compile(optimizer=Adam(lr=0.002), loss=loss_dict,
-                    metrics=['accuracy'], loss_weights=loss_weights_dict)
+                        metrics=['accuracy'], loss_weights=loss_weights_dict)
         net.fit_generator(multi_generator(train_images, train_labels, batch_size),
                           steps_per_epoch=max_train_images_cnt / batch_size + 1,
                           epochs=5,
@@ -158,7 +159,11 @@ def multi_branch_train(train_list, train_dir, class_count, camera_cnt, target_mo
             for layer in net.get_layer('resnet50').layers:
                 layer.trainable = True
             batch_size = 11
-        net.compile(optimizer=SGD(lr=2e-3, momentum=0.9, decay=0.01), loss=loss_dict,
+        if i > 5:
+            cnn_lr = 2e-3 / i
+        else:
+            cnn_lr = 2e-3
+        net.compile(optimizer=SGD(lr=cnn_lr, momentum=0.9, decay=0.01), loss=loss_dict,
                     metrics=['accuracy'], loss_weights=loss_weights_dict)
         log_path = target_model_path.replace('.h5', '_logs')
         safe_rmdir(log_path)
@@ -213,7 +218,7 @@ def multi_softmax_pretrain_on_dataset(source, project_path='/home/cwh/coding/ran
         train_list = 'unknown'
         train_dir = 'unknown'
         class_count = -1
-    multi_branch_train(train_list, train_dir, class_count, camera_cnt, '../pretrain/' + source + '_multi_pretrain.h5')
+    multi_branch_train(train_list, train_dir, class_count, camera_cnt, '../pretrain/' + source + '_multi_sd_pretrain.h5')
 
 
 if __name__ == '__main__':
