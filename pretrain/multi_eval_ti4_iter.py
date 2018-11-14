@@ -26,8 +26,8 @@ def test_predict(net, probe_path, gallery_path, pid_path, score_path):
 if __name__ == '__main__':
     source = 'market'
     target = 'market'
-    for i in range(5):
-        net = load_model('../pretrain/' + source + '_multi_pretrain_%d.h5' % i)
+    for i in range(10):
+        net = load_model('../pretrain/' + source + '_multi_sl_pretrain_%d.h5' % i)
         target_path = '/home/cwh/coding/Market-1501'
         probe_path = target_path + '/probe'
         gallery_path = target_path + '/test'
@@ -37,7 +37,7 @@ if __name__ == '__main__':
         # train_predict(net, train_path, pid_path, score_path)
         test_predict(net, probe_path, gallery_path,  pid_path, score_path)
         market_result_eval(pid_path, 'market_eval.txt', gallery_path, probe_path)
-    net = load_model('../pretrain/' + source + '_multi_pretrain.h5')
+    net = load_model('../pretrain/' + source + '_multi_sl_pretrain.h5')
     target_path = '/home/cwh/coding/Market-1501'
     probe_path = target_path + '/probe'
     gallery_path = target_path + '/test'
