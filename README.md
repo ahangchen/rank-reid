@@ -3,6 +3,8 @@
 ### Introduction
 - Implement [Siamese network](pretrain/pair_train.py) proposed by [Zhedong](https://github.com/layumi/2016_person_re-ID) in Keras
 - Using [RankNet](transfer/simple_rank_transfer.py) to regress ranking probability
+### Enviroment
+python2.7, tensorflow 1.4 and keras 2.1.5
 
 ### Model
 #### Siamese Network
