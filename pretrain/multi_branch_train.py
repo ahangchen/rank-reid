@@ -1,16 +1,16 @@
 from __future__ import division, print_function, absolute_import
 
 import os
-import utils.cuda_util
+import utils.cuda_util3
 from random import shuffle
 
 import numpy as np
 from keras.applications.resnet50 import ResNet50
 from keras.applications.resnet50 import preprocess_input
-from keras.callbacks import TensorBoard
+from keras.callbacks import TensorBoard, ModelCheckpoint
 from keras.layers import Dense, Flatten, Dropout, BatchNormalization, Activation
 from keras.layers import Input
-from keras.models import Model
+from keras.models import Model, load_model
 from keras.optimizers import Adam, SGD
 from keras.preprocessing import image
 from keras.preprocessing.image import ImageDataGenerator
@@ -126,9 +126,9 @@ def multi_branch_train(train_list, train_dir, class_count, camera_cnt, target_mo
     loss_weights_dict = {}
     for i in range(camera_cnt):
         loss_dict['sm_out_%d' % i] = 'categorical_crossentropy'
-        loss_weights_dict['sm_out_%d' % i] = loss_weights[i]
+        loss_weights_dict['sm_out_%d' % i] = 0 # loss_weights[i]
     net = multi_branch_model(class_count, camera_cnt)
-    for i in range(10):
+    for i in range(5):
         batch_size = 16
         net.get_layer('resnet50').trainable = False
         for layer in net.layers:
@@ -158,10 +158,7 @@ def multi_branch_train(train_list, train_dir, class_count, camera_cnt, target_mo
             for layer in net.get_layer('resnet50').layers:
                 layer.trainable = True
             batch_size = 12
-        if i > 5:
-            cnn_lr = 2e-3 / i
-        else:
-            cnn_lr = 2e-3
+        cnn_lr = 2e-3
         net.compile(optimizer=SGD(lr=cnn_lr, momentum=0.9, decay=0.01), loss=loss_dict,
                     metrics=['accuracy'], loss_weights=loss_weights_dict)
         log_path = target_model_path.replace('.h5', '_logs')
@@ -177,6 +174,28 @@ def multi_branch_train(train_list, train_dir, class_count, camera_cnt, target_mo
                           callbacks=[tb]
                           )
         net.save(target_model_path.replace('.h5', '_%d.h5' % i))
+    # net = load_model(target_model_path.replace('.h5', '_4.h5'))
+    print('fine tune together')
+    for layer in net.layers:
+        layer.trainable = True
+    for layer in net.get_layer('resnet50').layers:
+        if isinstance(layer, BatchNormalization):
+            layer.trainable = False
+        else:
+            layer.trainable = True
+    batch_size = 11
+    net.compile(optimizer=Adam(lr=1e-4), loss=loss_dict,
+                metrics=['accuracy'], loss_weights=loss_weights_dict)
+    save_model = ModelCheckpoint(target_model_path.replace('.h5', '_ft.h5'), period=5)
+    net.fit_generator(multi_generator(train_images, train_labels, batch_size),
+                      steps_per_epoch=max_train_images_cnt / batch_size + 1,
+                      epochs=20,
+                      validation_data=multi_generator(val_images, val_labels, 90, train=False),
+                      # validation_data=multi_generator(val_images, val_labels, 90, train=False),
+                      validation_steps=max_val_images_cnt / 90 + 1,
+                      verbose=2,
+                      callbacks=[save_model]
+                      )
     net.save(target_model_path)
 
 
@@ -217,7 +236,7 @@ def multi_softmax_pretrain_on_dataset(source, project_path='/home/cwh/coding/ran
         train_list = 'unknown'
         train_dir = 'unknown'
         class_count = -1
-    multi_branch_train(train_list, train_dir, class_count, camera_cnt, '../pretrain/' + source + '_multi_pretrain.h5')
+    multi_branch_train(train_list, train_dir, class_count, camera_cnt, '../pretrain/' + source + '_ftmulti_pretrain.h5')
 
 
 if __name__ == '__main__':

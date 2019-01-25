@@ -128,7 +128,7 @@ def multi_branch_train(train_list, train_dir, class_count, camera_cnt, target_mo
     loss_weights_dict = {}
     for i in range(camera_cnt):
         loss_dict['sm_out_%d' % i] = 'categorical_crossentropy'
-        loss_weights_dict['sm_out_%d' % i] = loss_weights[i]
+        loss_weights_dict['sm_out_%d' % i] = 0.15 # loss_weights[i]
     net = multi_branch_model(label_cnts, camera_cnt)
     for i in range(10):
         batch_size = 16
