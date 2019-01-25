@@ -11,7 +11,7 @@ python2.7, tensorflow 1.4 and keras 2.1.5
 ![](img/model_combined.png)
 
 ### What's new
-- Refer to [Zhedong's pytorch baseline](https://github.com/layumi/Person_reID_baseline_pytorch), we write a memory-friendly [evaluation script](https://github.com/ahangchen/rank-reid/blob/master/baseline/eval_on_result.py), when you generate ranking id tables, for example named with 'market_rank_pid.txt', you can use `python3 eval_on_result.py --target_dataset_path /home/cwh/coding/dataset/market --pid_path market_rank_pid.txt --result_path market_result.log` to compute map and rank1, rank5, rank10.
+- Refer to [Zhedong's pytorch baseline](https://github.com/layumi/Person_reID_baseline_pytorch), we write a memory-friendly [evaluation script](https://github.com/ahangchen/rank-reid/blob/master/baseline/eval_on_result.py), when you generate ranking id tables, for example named with 'market_rank_pid.txt', you can use `python3 eval_on_result.py --target_dataset_path /home/cwh/coding/dataset/market --pid_path market_rank_pid.txt --result_path market_result.log` to compute map and rank1, rank5, rank10. （test on python3, pytorch 0.4.0）
 
 #### RankNet
 ![](img/rank_model.png)
